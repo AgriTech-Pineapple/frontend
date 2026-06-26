@@ -1,0 +1,107 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="sky2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b2dfdb"/>
+      <stop offset="100%" stop-color="#80cbc4"/>
+    </linearGradient>
+    <linearGradient id="ground2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#66bb6a"/>
+      <stop offset="100%" stop-color="#2e7d32"/>
+    </linearGradient>
+    <pattern id="rows2" x="0" y="0" width="40" height="28" patternUnits="userSpaceOnUse">
+      <rect width="40" height="28" fill="none"/>
+      <line x1="0" y1="14" x2="40" y2="14" stroke="#1b5e20" stroke-width="1" stroke-opacity="0.4"/>
+    </pattern>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="400" height="300" fill="url(#sky2)"/>
+
+  <!-- Ground -->
+  <rect y="155" width="400" height="145" fill="url(#ground2)"/>
+  <rect y="155" width="400" height="145" fill="url(#rows2)"/>
+
+  <!-- Oil Palm tree definition -->
+  <!-- Large foreground trees -->
+  <g id="palm-lg">
+    <!-- Trunk -->
+    <rect x="-5" y="-60" width="10" height="80" rx="4" fill="#5d4037"/>
+    <rect x="-4" y="-60" width="4" height="80" rx="2" fill="#795548" opacity="0.5"/>
+    <!-- Trunk rings -->
+    <line x1="-5" y1="-45" x2="5" y2="-45" stroke="#4e342e" stroke-width="1.5" opacity="0.6"/>
+    <line x1="-5" y1="-30" x2="5" y2="-30" stroke="#4e342e" stroke-width="1.5" opacity="0.6"/>
+    <line x1="-5" y1="-15" x2="5" y2="-15" stroke="#4e342e" stroke-width="1.5" opacity="0.6"/>
+    <!-- Fronds (12 direction spread) -->
+    <path d="M0,-60 C-40,-95 -70,-85 -60,-70 C-50,-57 -20,-65 0,-60 Z" fill="#388e3c"/>
+    <path d="M0,-60 C40,-95 70,-85 60,-70 C50,-57 20,-65 0,-60 Z" fill="#2e7d32"/>
+    <path d="M0,-60 C-50,-70 -75,-55 -60,-45 C-47,-36 -18,-52 0,-60 Z" fill="#43a047"/>
+    <path d="M0,-60 C50,-70 75,-55 60,-45 C47,-36 18,-52 0,-60 Z" fill="#388e3c"/>
+    <path d="M0,-60 C-55,-60 -75,-40 -58,-35 C-44,-30 -15,-48 0,-60 Z" fill="#2e7d32"/>
+    <path d="M0,-60 C55,-60 75,-40 58,-35 C44,-30 15,-48 0,-60 Z" fill="#43a047"/>
+    <path d="M0,-60 C-50,-50 -65,-28 -46,-26 C-32,-24 -12,-45 0,-60 Z" fill="#388e3c"/>
+    <path d="M0,-60 C50,-50 65,-28 46,-26 C32,-24 12,-45 0,-60 Z" fill="#2e7d32"/>
+    <path d="M0,-60 C-20,-100 -10,-115 0,-110 C10,-115 20,-100 0,-60 Z" fill="#4caf50"/>
+    <path d="M0,-60 C-35,-105 -30,-120 -20,-114 C-10,-110 -8,-75 0,-60 Z" fill="#388e3c"/>
+    <path d="M0,-60 C35,-105 30,-120 20,-114 C10,-110 8,-75 0,-60 Z" fill="#43a047"/>
+    <!-- Fruit bunches (orange-red clusters) -->
+    <ellipse cx="-6" cy="-55" rx="8" ry="6" fill="#e65100" opacity="0.85"/>
+    <ellipse cx="4" cy="-52" rx="7" ry="5" fill="#bf360c" opacity="0.8"/>
+  </g>
+
+  <!-- Row 1: 5 large palms spread across -->
+  <use href="#palm-lg" transform="translate(40, 215)"/>
+  <use href="#palm-lg" transform="translate(120, 210)"/>
+  <use href="#palm-lg" transform="translate(200, 218)"/>
+  <use href="#palm-lg" transform="translate(280, 212)"/>
+  <use href="#palm-lg" transform="translate(360, 216)"/>
+
+  <!-- Medium mid-row palms -->
+  <g id="palm-md" transform="scale(0.72)">
+    <rect x="-4" y="-45" width="8" height="60" rx="3" fill="#6d4c41"/>
+    <line x1="-4" y1="-32" x2="4" y2="-32" stroke="#4e342e" stroke-width="1.2" opacity="0.6"/>
+    <line x1="-4" y1="-18" x2="4" y2="-18" stroke="#4e342e" stroke-width="1.2" opacity="0.6"/>
+    <path d="M0,-45 C-32,-76 -56,-68 -48,-56 C-40,-45 -16,-52 0,-45 Z" fill="#33691e"/>
+    <path d="M0,-45 C32,-76 56,-68 48,-56 C40,-45 16,-52 0,-45 Z" fill="#2e7d32"/>
+    <path d="M0,-45 C-40,-56 -60,-44 -46,-36 C-35,-29 -14,-40 0,-45 Z" fill="#558b2f"/>
+    <path d="M0,-45 C40,-56 60,-44 46,-36 C35,-29 14,-40 0,-45 Z" fill="#388e3c"/>
+    <path d="M0,-45 C-42,-38 -54,-22 -38,-20 C-27,-19 -10,-36 0,-45 Z" fill="#33691e"/>
+    <path d="M0,-45 C42,-38 54,-22 38,-20 C27,-19 10,-36 0,-45 Z" fill="#558b2f"/>
+    <path d="M0,-45 C-16,-80 -8,-90 0,-86 C8,-90 16,-80 0,-45 Z" fill="#689f38"/>
+    <ellipse cx="-4" cy="-40" rx="6" ry="5" fill="#d84315" opacity="0.8"/>
+    <ellipse cx="3" cy="-38" rx="5" ry="4" fill="#bf360c" opacity="0.75"/>
+  </g>
+
+  <use href="#palm-md" transform="translate(80, 178)"/>
+  <use href="#palm-md" transform="translate(160, 174)"/>
+  <use href="#palm-md" transform="translate(240, 180)"/>
+  <use href="#palm-md" transform="translate(320, 176)"/>
+
+  <!-- Small distant row -->
+  <g id="palm-sm" transform="scale(0.48)">
+    <rect x="-3" y="-32" width="6" height="42" rx="2" fill="#795548"/>
+    <path d="M0,-32 C-22,-54 -38,-48 -32,-38 C-26,-30 -10,-36 0,-32 Z" fill="#1b5e20"/>
+    <path d="M0,-32 C22,-54 38,-48 32,-38 C26,-30 10,-36 0,-32 Z" fill="#2e7d32"/>
+    <path d="M0,-32 C-28,-40 -40,-30 -30,-24 C-22,-20 -8,-28 0,-32 Z" fill="#33691e"/>
+    <path d="M0,-32 C28,-40 40,-30 30,-24 C22,-20 8,-28 0,-32 Z" fill="#388e3c"/>
+    <path d="M0,-32 C-10,-56 -4,-64 0,-60 C4,-64 10,-56 0,-32 Z" fill="#558b2f"/>
+    <ellipse cx="0" cy="-28" rx="5" ry="4" fill="#bf360c" opacity="0.7"/>
+  </g>
+
+  <use href="#palm-sm" transform="translate(20, 162)"/>
+  <use href="#palm-sm" transform="translate(60, 159)"/>
+  <use href="#palm-sm" transform="translate(100, 161)"/>
+  <use href="#palm-sm" transform="translate(140, 158)"/>
+  <use href="#palm-sm" transform="translate(180, 162)"/>
+  <use href="#palm-sm" transform="translate(220, 159)"/>
+  <use href="#palm-sm" transform="translate(260, 161)"/>
+  <use href="#palm-sm" transform="translate(300, 160)"/>
+  <use href="#palm-sm" transform="translate(340, 162)"/>
+  <use href="#palm-sm" transform="translate(380, 159)"/>
+
+  <!-- Horizon haze -->
+  <rect y="148" width="400" height="16" fill="url(#sky2)" opacity="0.4"/>
+
+  <!-- Label pill -->
+  <rect x="10" y="272" width="130" height="22" rx="11" fill="#33691e" fill-opacity="0.8"/>
+  <text x="75" y="287" text-anchor="middle" fill="white" font-family="system-ui,sans-serif" font-size="11" font-weight="600" letter-spacing="0.5">Oil Palm Estate</text>
+</svg>
