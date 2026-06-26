@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 import { useFarm } from "@/lib/hooks";
 import { createClient } from "@/lib/supabase/client";
 
-const TILER_BASE    = process.env.NEXT_PUBLIC_TILER_URL    ?? "http://localhost:3001";
-const MODIFIER_BASE = process.env.NEXT_PUBLIC_MODIFIER_URL ?? "http://localhost:3002";
+const TILER_BASE    = process.env.NEXT_PUBLIC_TILER_URL;
+const MODIFIER_BASE = process.env.NEXT_PUBLIC_MODIFIER_URL;
 
 // Plant markers are only rendered at or above this zoom level.
 // Below it every marker is removed and a hint is shown instead.

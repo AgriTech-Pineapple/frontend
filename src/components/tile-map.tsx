@@ -13,8 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SlidersHorizontal } from "lucide-react";
 
-const TILER_BASE =
-  process.env.NEXT_PUBLIC_TILER_URL ?? "http://localhost:3001";
+const TILER_BASE = process.env.NEXT_PUBLIC_TILER_URL;
 
 type TiffInfo = {
   bboxWGS84: [number, number, number, number]; // [west, south, east, north]
