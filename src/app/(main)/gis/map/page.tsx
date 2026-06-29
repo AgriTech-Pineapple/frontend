@@ -25,10 +25,12 @@ const layers: {
   tileLayer?: string;
 }[] = [
   { key: "composite", label: "Composite", overlay: "health", hasTiles: true, tileLayer: undefined, legend: [
-    { color: "oklch(0.55 0.16 130)", label: "Healthy" },
-    { color: "oklch(0.78 0.14 95)", label: "Mild stress" },
-    { color: "oklch(0.62 0.16 50)", label: "Severe stress" },
-    { color: "oklch(0.7 0.04 100)", label: "Bare ground" },
+    { color: "#16a34a", label: "Very Good Vegetation" },
+    { color: "#22c55e", label: "Good Vegetation" },
+    { color: "#eab308", label: "Moderate Vegetation" },
+    { color: "#f97316", label: "Sparse Vegetation" },
+    { color: "#ef4444", label: "Bare / Stressed" },
+    { color: "#94a3b8", label: "Noise / artifact" },
   ]},
   { key: "ndvi", label: "NDVI", overlay: "ndvi", hasTiles: true, tileLayer: "ndvi", legend: [
     { color: "oklch(0.55 0.16 130)", label: "0.7 – 1.0" },
@@ -212,7 +214,10 @@ export default function Page() {
                   ["Sector",   selectedPlant.sector_label],
                   ["Row",      selectedPlant.row_index],
                   ["Column",   selectedPlant.col_index],
-                  ["Area",     selectedPlant.area_px != null ? `${selectedPlant.area_px} px` : null],
+                  ["NDVI",     selectedPlant.ndvi != null ? selectedPlant.ndvi.toFixed(3) : null],
+                  ["Health",   selectedPlant.health_status != null && selectedPlant.health_score != null
+                                 ? `${selectedPlant.health_status} (${selectedPlant.health_score.toFixed(2)})`
+                                 : (selectedPlant.health_status ?? (selectedPlant.health_score != null ? selectedPlant.health_score.toFixed(2) : null))],
                   ["Growth",   selectedPlant.predicted_growth_stage_name],
                   ["Nitrogen", selectedPlant.predicted_nitrogen_status],
                   ["Est. yield", selectedPlant.predicted_yield_kg != null ? `${selectedPlant.predicted_yield_kg.toFixed(1)} kg` : null],

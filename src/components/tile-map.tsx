@@ -29,6 +29,7 @@ export type PlantProperties = {
   row_index:    number | null;
   col_index:    number | null;
   area_px:      number | null;
+  canopy_area:  number | null;
   pixel_x:      number | null;
   pixel_y:      number | null;
   // Health / ML fields
@@ -36,6 +37,8 @@ export type PlantProperties = {
   ndvi:                        number | null;
   ndvi_mean:                   number | null;
   ndvi_category:               string | null;
+  health_status:               string | null;
+  health_score:                number | null;
   predicted_growth_stage_name: string | null;
   predicted_yield_kg:          number | null;
   predicted_nitrogen_status:   string | null;
