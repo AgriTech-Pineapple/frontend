@@ -385,7 +385,7 @@ export function TileMap({
   }, [plantsSeed, farmId]);
 
   return (
-    <div className={cn("relative overflow-hidden", className)}>
+    <div className={cn("relative isolate overflow-hidden", className)}>
       <MapStatusOverlay status={status} label={label} plantsProgress={plantsProgress} />
 
       {/* View-options dropdown — floats above the Leaflet panes (max z-index ~800) */}

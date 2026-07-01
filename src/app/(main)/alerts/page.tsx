@@ -31,21 +31,17 @@ export default function Page() {
   const [resolved, setResolved] = useState<Alert[]>([]);
 
   const resolve = (id: string) => {
-    setAlerts((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      const done = prev.find((a) => a.id === id);
-      if (done) setResolved((r) => [done, ...r]);
-      return next;
-    });
+    const done = alerts.find((a) => a.id === id);
+    if (!done) return;
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+    setResolved((r) => [done, ...r]);
   };
 
   const restore = (id: string) => {
-    setResolved((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      const back = prev.find((a) => a.id === id);
-      if (back) setAlerts((r) => [back, ...r]);
-      return next;
-    });
+    const back = resolved.find((a) => a.id === id);
+    if (!back) return;
+    setResolved((prev) => prev.filter((a) => a.id !== id));
+    setAlerts((r) => [back, ...r]);
   };
 
   return (
