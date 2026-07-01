@@ -3,6 +3,7 @@
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useState } from "react";
 import type { Map, TileLayer, GeoJSON } from "leaflet";
+import type { FeatureCollection } from "geojson";
 import { cn } from "@/lib/utils";
 import { useFarm } from "@/lib/hooks";
 import { createClient } from "@/lib/supabase/client";
@@ -276,7 +277,8 @@ export function TileMap({
             const addBatch = () => {
               if (cancelled) return;
               const end = Math.min(i + BATCH_SIZE, features.length);
-              plantsLayer.addData({ type: "FeatureCollection", features: features.slice(i, end) });
+              const batch: FeatureCollection = { type: "FeatureCollection", features: features.slice(i, end) };
+              plantsLayer.addData(batch);
               i = end;
               setPlantsProgress(Math.round((i / features.length) * 100));
               if (i < features.length) requestAnimationFrame(addBatch);
@@ -367,7 +369,8 @@ export function TileMap({
         const addBatch = () => {
           if (cancelled) return;
           const end = Math.min(i + BATCH_SIZE, features.length);
-          plantsLayer.addData({ type: "FeatureCollection", features: features.slice(i, end) });
+          const batch: FeatureCollection = { type: "FeatureCollection", features: features.slice(i, end) };
+          plantsLayer.addData(batch);
           i = end;
           setPlantsProgress(Math.round((i / features.length) * 100));
           if (i < features.length) requestAnimationFrame(addBatch);
