@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useFarm } from "@/lib/hooks";
 import { createClient } from "@/lib/supabase/client";
+import { MapStatusOverlay } from "@/components/map-status-overlay";
 
 const TILER_BASE    = process.env.NEXT_PUBLIC_TILER_URL;
 const MODIFIER_BASE = process.env.NEXT_PUBLIC_MODIFIER_URL;
@@ -125,6 +126,9 @@ export function PlantEditorOverlay({
   const [mode,          setMode]          = useState<Mode>("select");
   const [saveStatus,    setSaveStatus]    = useState<SaveStatus>("idle");
   const [showZoomHint,  setShowZoomHint]  = useState(false);
+  const [status,        setStatus]        = useState<"loading" | "ready" | "offline">("loading");
+  // null = no batch in progress; 0-100 = percent of the initial viewport's markers built so far
+  const [plantsProgress, setPlantsProgress] = useState<number | null>(null);
 
   // Unified setter that keeps the ref and state in sync
   const setSelectedIds = useCallback((ids: Set<string>) => {
@@ -356,6 +360,38 @@ export function PlantEditorOverlay({
     }
   }, [createMarkerInternal]);
 
+  // ─── Initial viewport population (batched) ────────────────────────────────
+  // Only used for the first marker population after data loads — pan/zoom syncs
+  // via syncMarkersToViewport() above stay unbatched since they're already bounded
+  // by the visible viewport and batching them would make dragging feel laggy.
+  const populateInitialViewport = useCallback(() => {
+    const map = mapRef.current;
+    const L   = leafletRef.current;
+    if (!map || !L) return;
+
+    if (map.getZoom() < MIN_ZOOM_FOR_MARKERS) {
+      setShowZoomHint(true);
+      return;
+    }
+    setShowZoomHint(false);
+
+    const bounds = map.getBounds().pad(0.15);
+    const toAdd  = allPlantsRef.current.filter(p => bounds.contains([p.lat, p.lng]));
+    if (!toAdd.length) return;
+
+    const BATCH_SIZE = 300;
+    let i = 0;
+    setPlantsProgress(0);
+    const addBatch = () => {
+      const end = Math.min(i + BATCH_SIZE, toAdd.length);
+      for (; i < end; i++) createMarkerInternal(toAdd[i], map, L);
+      setPlantsProgress(Math.round((i / toAdd.length) * 100));
+      if (i < toAdd.length) requestAnimationFrame(addBatch);
+      else setPlantsProgress(null);
+    };
+    addBatch();
+  }, [createMarkerInternal]);
+
   // ─── Map initialisation ───────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -390,6 +426,7 @@ export function PlantEditorOverlay({
       ).addTo(map);
 
       // Tiler imagery overlay
+      let tilerOffline = false;
       try {
         const base = farmId
           ? (tileLayer ? `${TILER_BASE}/tiles/${farmId}/${tileLayer}` : `${TILER_BASE}/tiles/${farmId}`)
@@ -413,7 +450,7 @@ export function PlantEditorOverlay({
             map.fitBounds(L.latLngBounds([south, west], [north, east]), { padding: [24, 24], maxZoom: 22 });
           }
         }
-      } catch { /* tiler offline — satellite base only */ }
+      } catch { tilerOffline = true; }
 
       // Load all plant data into refs, then populate the viewport
       try {
@@ -449,9 +486,11 @@ export function PlantEditorOverlay({
           allPlantsMapRef.current = new Map(loaded.map(p => [p.id, p]));
           setTotalCount(loaded.length);
           mapRef.current = map;
-          syncMarkersToViewport();
+          populateInitialViewport();
         }
       } catch { /* no plants available */ }
+
+      setStatus(tilerOffline ? "offline" : "ready");
 
       // Viewport culling on pan / zoom
       map.on("moveend", syncMarkersToViewport);
@@ -578,6 +617,7 @@ export function PlantEditorOverlay({
       >
         {/* ── Map area (left) ── */}
         <div className="flex-1 relative">
+          <MapStatusOverlay status={status} plantsProgress={plantsProgress} />
           {mode === "add" && (
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] rounded-full bg-sage-deep text-white px-4 py-1.5 text-xs font-medium shadow-lg pointer-events-none select-none">
               Click the map to place a plant

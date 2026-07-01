@@ -12,6 +12,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SlidersHorizontal } from "lucide-react";
+import { MapStatusOverlay } from "@/components/map-status-overlay";
 
 const TILER_BASE = process.env.NEXT_PUBLIC_TILER_URL;
 
@@ -105,6 +106,8 @@ export function TileMap({
 
   const [status, setStatus]       = useState<"loading" | "ready" | "offline">("loading");
   const [showPlants, setShowPlants] = useState(true);
+  // null = no plant batch in progress; 0-100 = percent of features added to the map so far
+  const [plantsProgress, setPlantsProgress] = useState<number | null>(null);
 
   useEffect(() => { onPlantSelectRef.current = onPlantSelect; }, [onPlantSelect]);
   useEffect(() => { onViewChangeRef.current  = onViewChange;  }, [onViewChange]);
@@ -232,7 +235,7 @@ export function TileMap({
             headers: token ? { Authorization: `Bearer ${token}` } : {},
           }).then((r) => r.json());
           if (plants.features?.length && !cancelled) {
-            const plantsLayer = L.geoJSON(plants, {
+            const plantsLayer = L.geoJSON(undefined, {
               pointToLayer: (feat, latlng) => {
                 const props = feat.properties as PlantProperties;
                 const marker = L.circleMarker(latlng, {
@@ -262,6 +265,24 @@ export function TileMap({
             plantsLayerRef.current = plantsLayer;
             // Use ref so we respect any toggle that happened while plants were loading
             if (showPlantsRef.current) plantsLayer.addTo(map);
+
+            // Feed features in over several animation frames instead of all at once, and
+            // track real progress so the UI can show an honest "still working" indicator
+            // instead of the map appearing to hang while thousands of markers are built.
+            const features = plants.features;
+            const BATCH_SIZE = 300;
+            let i = 0;
+            setPlantsProgress(0);
+            const addBatch = () => {
+              if (cancelled) return;
+              const end = Math.min(i + BATCH_SIZE, features.length);
+              plantsLayer.addData({ type: "FeatureCollection", features: features.slice(i, end) });
+              i = end;
+              setPlantsProgress(Math.round((i / features.length) * 100));
+              if (i < features.length) requestAnimationFrame(addBatch);
+              else setPlantsProgress(null);
+            };
+            addBatch();
           }
         } catch { /* no plants data — silently skip */ }
 
@@ -318,7 +339,7 @@ export function TileMap({
 
         if (!plants.features?.length) return;
 
-        const plantsLayer = L.geoJSON(plants, {
+        const plantsLayer = L.geoJSON(undefined, {
           pointToLayer: (feat: any, latlng: any) => {
             const props = feat.properties as PlantProperties;
             const marker = L.circleMarker(latlng, {
@@ -338,6 +359,21 @@ export function TileMap({
         });
         plantsLayerRef.current = plantsLayer;
         if (showPlantsRef.current) plantsLayer.addTo(map);
+
+        const features = plants.features;
+        const BATCH_SIZE = 300;
+        let i = 0;
+        setPlantsProgress(0);
+        const addBatch = () => {
+          if (cancelled) return;
+          const end = Math.min(i + BATCH_SIZE, features.length);
+          plantsLayer.addData({ type: "FeatureCollection", features: features.slice(i, end) });
+          i = end;
+          setPlantsProgress(Math.round((i / features.length) * 100));
+          if (i < features.length) requestAnimationFrame(addBatch);
+          else setPlantsProgress(null);
+        };
+        addBatch();
       } catch { /* tiler unreachable — keep old markers */ }
     })();
 
@@ -347,25 +383,7 @@ export function TileMap({
 
   return (
     <div className={cn("relative overflow-hidden", className)}>
-      {status === "loading" && (
-        <div className="absolute inset-0 z-10 flex items-center justify-center bg-muted/40">
-          <span className="text-xs text-muted-foreground animate-pulse">
-            Loading map…
-          </span>
-        </div>
-      )}
-
-      {status === "offline" && (
-        <div className="absolute top-3 left-3 z-10 rounded-md bg-background/85 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur pointer-events-none">
-          Tiler offline — run the tiler service to display imagery
-        </div>
-      )}
-
-      {label && (
-        <div className="absolute bottom-3 left-3 z-10 rounded-md bg-background/85 px-2.5 py-1 text-[11px] font-medium backdrop-blur pointer-events-none">
-          {label}
-        </div>
-      )}
+      <MapStatusOverlay status={status} label={label} plantsProgress={plantsProgress} />
 
       {/* View-options dropdown — floats above the Leaflet panes (max z-index ~800) */}
       <div className="absolute top-3 right-3 z-[1000]">
