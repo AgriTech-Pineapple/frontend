@@ -87,9 +87,9 @@ export function AppSidebar({ user }: { user?: UserInfo }) {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border">
-        <Link href="/" className="flex items-center gap-2.5 px-2 py-2 hover:opacity-90">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sage-deep text-primary-foreground shadow-sm">
+      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border">
+        <Link href="/" className="flex items-center gap-2.5 px-2 py-2 hover:opacity-90 group-data-[collapsible=icon]:px-0">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sage-deep text-primary-foreground shadow-sm">
             <Leaf className="h-5 w-5" />
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
@@ -102,7 +102,7 @@ export function AppSidebar({ user }: { user?: UserInfo }) {
       <SidebarContent>
         {sections.map((section) => (
           <SidebarGroup key={section.label}>
-            <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+            <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground/90">
               {section.label}
             </SidebarGroupLabel>
             <SidebarGroupContent>

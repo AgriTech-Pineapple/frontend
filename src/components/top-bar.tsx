@@ -31,7 +31,7 @@ export function TopBar() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search fields, workers, missions, reports…"
-            className="h-9 pl-8 bg-muted/40 border-transparent focus-visible:border-border"
+            className="h-9 pl-8 bg-white border border-border"
           />
         </div>
       </div>
