@@ -23,7 +23,7 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: form.get("email") as string,
       password: form.get("password") as string,
     });
@@ -31,26 +31,40 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/");
+      // admins land on the admin console, everyone else on the main dashboard
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("user_type")
+        .eq("id", data.user.id)
+        .single();
+      router.push(profile?.user_type === "admin" ? "/admin" : "/");
       router.refresh();
     }
   }
 
-  async function handleSignUp(e: React.FormEvent<HTMLFormElement>) {
+  async function handleRequestAccess(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const { error } = await supabase.auth.signUp({
+    const { error } = await supabase.from("service_requests").insert({
+      first_name: form.get("firstName") as string,
+      last_name: form.get("lastName") as string,
       email: form.get("email") as string,
-      password: form.get("password") as string,
-      options: { data: { full_name: form.get("fullName") as string } },
+      phone: form.get("phone") as string,
     });
     if (error) {
-      setError(error.message);
+      // unique violation: a request with this email already exists
+      setError(
+        error.code === "23505"
+          ? "We already have a request for this email. Our team will be in touch soon."
+          : error.message
+      );
       setLoading(false);
     } else {
-      setMessage("Check your email to confirm your account, then sign in.");
+      setMessage(
+        "Thanks for your interest! Our team will contact you shortly."
+      );
       setLoading(false);
     }
   }
@@ -258,8 +272,12 @@ export default function LoginPage() {
                     Get started
                   </p>
                   <h1 className="text-[32px] font-extrabold tracking-tighter text-primary leading-tight">
-                    Create account.
+                    Request access.
                   </h1>
+                  <p className="text-sm text-on-surface-variant mt-3 leading-relaxed">
+                    Leave your
+                    details here and we&apos;ll reach out.
+                  </p>
                 </div>
 
                 {message ? (
@@ -267,26 +285,45 @@ export default function LoginPage() {
                     {message}
                   </div>
                 ) : (
-                  <form onSubmit={handleSignUp} className="space-y-5">
-                    <div className="lp-fade-up lp-fade-up-d1">
-                      <label
-                        className="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-2"
-                        htmlFor="fullName"
-                      >
-                        Full name
-                      </label>
-                      <div className="relative">
-                        <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                          person
-                        </span>
+                  <form onSubmit={handleRequestAccess} className="space-y-5">
+                    <div className="grid grid-cols-2 gap-4 lp-fade-up lp-fade-up-d1">
+                      <div>
+                        <label
+                          className="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-2"
+                          htmlFor="firstName"
+                        >
+                          First name
+                        </label>
+                        <div className="relative">
+                          <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                            person
+                          </span>
+                          <input
+                            id="firstName"
+                            name="firstName"
+                            type="text"
+                            placeholder="First name"
+                            required
+                            autoComplete="given-name"
+                            className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low text-on-background placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label
+                          className="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-2"
+                          htmlFor="lastName"
+                        >
+                          Last name
+                        </label>
                         <input
-                          id="fullName"
-                          name="fullName"
+                          id="lastName"
+                          name="lastName"
                           type="text"
-                          placeholder="Your name"
+                          placeholder="Last name"
                           required
-                          autoComplete="name"
-                          className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low text-on-background placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
+                          autoComplete="family-name"
+                          className="w-full px-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low text-on-background placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
                         />
                       </div>
                     </div>
@@ -317,33 +354,23 @@ export default function LoginPage() {
                     <div className="lp-fade-up lp-fade-up-d3">
                       <label
                         className="block text-[11px] font-semibold text-on-surface-variant uppercase tracking-widest mb-2"
-                        htmlFor="su-password"
+                        htmlFor="su-phone"
                       >
-                        Password
+                        Phone number
                       </label>
                       <div className="relative">
                         <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-                          lock
+                          call
                         </span>
                         <input
-                          id="su-password"
-                          name="password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="••••••••"
+                          id="su-phone"
+                          name="phone"
+                          type="tel"
+                          placeholder="+60 12-345 6789"
                           required
-                          minLength={6}
-                          autoComplete="new-password"
-                          className="w-full pl-11 pr-12 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low text-on-background placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
+                          autoComplete="tel"
+                          className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low text-on-background placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all text-sm"
                         />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">
-                            {showPassword ? "visibility_off" : "visibility"}
-                          </span>
-                        </button>
                       </div>
                     </div>
 
@@ -360,7 +387,7 @@ export default function LoginPage() {
                         disabled={loading}
                         className="w-full bg-primary text-on-primary py-4 rounded-xl font-semibold text-[15px] hover:brightness-110 hover:-translate-y-0.5 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                       >
-                        {loading ? "Creating account…" : "Create account"}
+                        {loading ? "Submitting request…" : "Request access"}
                         {!loading && (
                           <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
                         )}

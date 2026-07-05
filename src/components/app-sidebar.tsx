@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Sprout, Map, Users, Plane, FileBarChart,
-  Bell, Database, Settings, Leaf, ChevronRight, Tractor,
+  Bell, Database, Settings, Leaf, ChevronRight, Tractor, ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -76,7 +76,7 @@ const sections: { label: string; items: Item[] }[] = [
   },
 ];
 
-export function AppSidebar({ user }: { user?: UserInfo }) {
+export function AppSidebar({ user, isAdmin }: { user?: UserInfo; isAdmin?: boolean }) {
   const pathname = usePathname();
   const displayName = user?.fullName ?? "User";
   const displayRole = user?.role ?? "Estate Manager";
@@ -146,6 +146,26 @@ export function AppSidebar({ user }: { user?: UserInfo }) {
             </SidebarGroupContent>
           </SidebarGroup>
         ))}
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground/90">
+              Administration
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/admin")} tooltip="Admin Console">
+                    <Link href="/admin">
+                      <ShieldCheck className="h-4 w-4" />
+                      <span>Admin Console</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">

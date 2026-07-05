@@ -21,6 +21,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect("/login");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("user_type")
+    .eq("id", user.id)
+    .single();
+  const isAdmin = profile?.user_type === "admin";
+
   const userInfo = user
     ? {
         fullName: (user.user_metadata?.full_name as string) ?? user.email ?? "User",
@@ -34,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <SidebarProvider>
-      <AppSidebar user={userInfo} />
+      <AppSidebar user={userInfo} isAdmin={isAdmin} />
       <SidebarInset className="bg-background">
         <TopBar />
         <main className="flex-1">
