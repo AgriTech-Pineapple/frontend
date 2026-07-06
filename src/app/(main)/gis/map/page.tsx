@@ -18,48 +18,17 @@ const layers: {
   key: LayerKey;
   label: string;
   overlay: "ndvi" | "ndre" | "health" | "terrain" | "yield";
-  legend: { color: string; label: string }[];
   /** true = render TileMap from the tiler; false = CSS mock */
   hasTiles: boolean;
   /** tiler layer name; undefined = default /tiles/ endpoint (RGB) */
   tileLayer?: string;
 }[] = [
-  { key: "composite", label: "Composite", overlay: "health", hasTiles: true, tileLayer: undefined, legend: [
-    { color: "#16a34a", label: "Very Good Vegetation" },
-    { color: "#22c55e", label: "Good Vegetation" },
-    { color: "#eab308", label: "Moderate Vegetation" },
-    { color: "#f97316", label: "Sparse Vegetation" },
-    { color: "#ef4444", label: "Bare / Stressed" },
-    { color: "#94a3b8", label: "Noise / artifact" },
-  ]},
-  { key: "ndvi", label: "NDVI", overlay: "ndvi", hasTiles: true, tileLayer: "ndvi", legend: [
-    { color: "oklch(0.55 0.16 130)", label: "0.7 – 1.0" },
-    { color: "oklch(0.75 0.14 110)", label: "0.5 – 0.7" },
-    { color: "oklch(0.78 0.12 80)", label: "0.3 – 0.5" },
-    { color: "oklch(0.62 0.15 45)", label: "< 0.3" },
-  ]},
-  { key: "ndre", label: "NDRE", overlay: "ndre", hasTiles: true, tileLayer: "ndre", legend: [
-    { color: "oklch(0.5 0.1 145)", label: "0.5+" },
-    { color: "oklch(0.62 0.09 130)", label: "0.35 – 0.5" },
-    { color: "oklch(0.75 0.07 110)", label: "< 0.35" },
-    { color: "oklch(0.7 0.04 100)", label: "Bare" },
-  ]},
-  { key: "health", label: "Health", overlay: "health", hasTiles: false, legend: [
-    { color: "oklch(0.55 0.16 130)", label: "Healthy" },
-    { color: "oklch(0.78 0.14 95)", label: "Mild stress" },
-    { color: "oklch(0.62 0.16 50)", label: "Severe stress" },
-    { color: "oklch(0.7 0.04 100)", label: "Bare ground" },
-  ]},
-  { key: "terrain", label: "Terrain", overlay: "terrain", hasTiles: false, legend: [
-    { color: "oklch(0.65 0.06 80)", label: "Elevation low" },
-    { color: "oklch(0.55 0.05 90)", label: "Mid" },
-    { color: "oklch(0.45 0.04 100)", label: "High" },
-  ]},
-  { key: "yield", label: "Yield", overlay: "yield", hasTiles: false, legend: [
-    { color: "oklch(0.78 0.14 90)", label: "> 65 t/ha" },
-    { color: "oklch(0.68 0.16 75)", label: "55 – 65" },
-    { color: "oklch(0.6 0.15 50)", label: "< 55" },
-  ]},
+  { key: "composite", label: "Composite", overlay: "health", hasTiles: true, tileLayer: undefined },
+  { key: "ndvi", label: "NDVI", overlay: "ndvi", hasTiles: true, tileLayer: "ndvi" },
+  { key: "ndre", label: "NDRE", overlay: "ndre", hasTiles: true, tileLayer: "ndre" },
+  { key: "health", label: "Health", overlay: "health", hasTiles: false },
+  { key: "terrain", label: "Terrain", overlay: "terrain", hasTiles: false },
+  { key: "yield", label: "Yield", overlay: "yield", hasTiles: false },
 ];
 
 function MapView({
@@ -167,18 +136,6 @@ export default function Page() {
               ))}
             </select>
           </Card>
-          <Card className="p-4 border-border/60 shadow-none">
-            <p className="mb-3 text-sm font-medium">Legend</p>
-            <div className="space-y-2">
-              {layer.legend.map((l) => (
-                <div key={l.label} className="flex items-center gap-2 text-xs">
-                  <span className="h-3 w-6 rounded-sm" style={{ background: l.color }} />
-                  <span className="text-muted-foreground">{l.label}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
           {selectedPlant && (
             <Card className="p-4 border-border/60 shadow-none">
               <div className="flex items-center justify-between mb-3">

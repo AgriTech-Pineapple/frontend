@@ -79,9 +79,9 @@ export default function Page() {
           <h3 className="font-display text-lg font-semibold">Estate metadata</h3>
           <dl className="mt-4 divide-y divide-border/60 text-sm">
             {[
-              ["Crop", farm.crop], ["Estate type", farm.estateType], ["Established", farm.established],
-              ["Soil profile", farm.soil], ["Avg elevation", farm.elevation],
-              ["Climate zone", farm.climate], ["Irrigation", farm.irrigation], ["Manager", farm.manager],
+              ["Crop", farm.crop], ["Estate type", farm.estateType], ["Established", "N/A"],
+              ["Soil profile", "N/A"], ["Avg elevation", farm.elevation],
+              ["Climate zone", farm.climate], ["Irrigation", "N/A"], ["Manager", farm.manager],
             ].map(([k, v]) => (
               <div key={k} className="flex justify-between gap-4 py-2.5">
                 <dt className="text-muted-foreground">{k}</dt>

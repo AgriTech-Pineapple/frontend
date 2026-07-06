@@ -39,12 +39,12 @@ export function FieldMap({
   label?: string;
 }) {
   const overlays: Record<string, string> = {
-    ndvi: "radial-gradient(circle at 25% 30%, oklch(0.72 0.13 135 / .85), transparent 35%), radial-gradient(circle at 65% 55%, oklch(0.65 0.15 130 / .8), transparent 40%), radial-gradient(circle at 75% 25%, oklch(0.55 0.16 125 / .75), transparent 30%), radial-gradient(circle at 40% 80%, oklch(0.8 0.12 100 / .7), transparent 35%), radial-gradient(circle at 88% 75%, oklch(0.55 0.18 60 / .65), transparent 28%)",
-    ndre: "radial-gradient(circle at 30% 35%, oklch(0.5 0.1 145 / .85), transparent 40%), radial-gradient(circle at 70% 60%, oklch(0.62 0.09 130 / .8), transparent 38%), radial-gradient(circle at 60% 20%, oklch(0.75 0.07 110 / .7), transparent 35%)",
-    health: "radial-gradient(circle at 30% 30%, oklch(0.72 0.13 140 / .85), transparent 35%), radial-gradient(circle at 70% 65%, oklch(0.78 0.15 95 / .8), transparent 38%), radial-gradient(circle at 85% 30%, oklch(0.6 0.18 45 / .75), transparent 30%)",
-    terrain: "radial-gradient(circle at 30% 40%, oklch(0.65 0.06 80 / .8), transparent 40%), radial-gradient(circle at 60% 30%, oklch(0.55 0.05 90 / .8), transparent 38%), radial-gradient(circle at 75% 70%, oklch(0.45 0.04 100 / .8), transparent 40%)",
-    yield: "radial-gradient(circle at 30% 30%, oklch(0.78 0.14 90 / .85), transparent 38%), radial-gradient(circle at 70% 60%, oklch(0.68 0.16 75 / .8), transparent 40%), radial-gradient(circle at 50% 80%, oklch(0.6 0.15 50 / .75), transparent 32%)",
-    plain: "radial-gradient(circle at 40% 50%, oklch(0.85 0.06 130 / .6), transparent 60%)",
+    ndvi: "radial-gradient(circle at 25% 30%, oklch(0.62 0.19 135 / .95), transparent 35%), radial-gradient(circle at 65% 55%, oklch(0.55 0.21 130 / .9), transparent 40%), radial-gradient(circle at 75% 25%, oklch(0.45 0.2 125 / .85), transparent 30%), radial-gradient(circle at 40% 80%, oklch(0.7 0.18 100 / .8), transparent 35%), radial-gradient(circle at 88% 75%, oklch(0.45 0.22 60 / .75), transparent 28%)",
+    ndre: "radial-gradient(circle at 30% 35%, oklch(0.4 0.14 145 / .95), transparent 40%), radial-gradient(circle at 70% 60%, oklch(0.52 0.13 130 / .9), transparent 38%), radial-gradient(circle at 60% 20%, oklch(0.65 0.11 110 / .8), transparent 35%)",
+    health: "radial-gradient(circle at 30% 30%, oklch(0.62 0.19 140 / .95), transparent 35%), radial-gradient(circle at 70% 65%, oklch(0.68 0.2 95 / .9), transparent 38%), radial-gradient(circle at 85% 30%, oklch(0.5 0.22 45 / .85), transparent 30%)",
+    terrain: "radial-gradient(circle at 30% 40%, oklch(0.55 0.09 80 / .9), transparent 40%), radial-gradient(circle at 60% 30%, oklch(0.45 0.08 90 / .9), transparent 38%), radial-gradient(circle at 75% 70%, oklch(0.35 0.06 100 / .9), transparent 40%)",
+    yield: "radial-gradient(circle at 30% 30%, oklch(0.68 0.19 90 / .95), transparent 38%), radial-gradient(circle at 70% 60%, oklch(0.58 0.21 75 / .9), transparent 40%), radial-gradient(circle at 50% 80%, oklch(0.5 0.2 50 / .85), transparent 32%)",
+    plain: "radial-gradient(circle at 40% 50%, oklch(0.75 0.1 130 / .75), transparent 60%)",
     none: "",
   };
   return (

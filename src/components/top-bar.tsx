@@ -5,7 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, Calendar, AlertCircle } from "lucide-react";
+import { Search, Bell, AlertCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type Alert = { level: "High" | "Medium" | "Low"; farm: string; title: string; ago: string };
@@ -36,10 +36,6 @@ export function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="hidden gap-2 md:inline-flex">
-          <Calendar className="h-4 w-4" />
-          <span className="text-xs">Season 25/26 · Week 41</span>
-        </Button>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Recent alerts">

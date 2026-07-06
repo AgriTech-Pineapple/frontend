@@ -9,10 +9,10 @@ export default function Page() {
       title="Health Layer"
       description="Composite plant-health classification across the estate."
       legend={[
-        { color: "oklch(0.55 0.16 130)", label: "Healthy" },
-        { color: "oklch(0.78 0.14 95)", label: "Mild stress" },
-        { color: "oklch(0.62 0.16 50)", label: "Severe stress" },
-        { color: "oklch(0.7 0.04 100)", label: "Bare ground" },
+        { color: "oklch(0.55 0.16 130)", label: "NDVI ≥ 0.6  healthy" },
+        { color: "oklch(0.78 0.14 95)", label: "NDVI 0.3 – 0.6  mild stress" },
+        { color: "oklch(0.62 0.16 50)", label: "NDVI 0.1 – 0.3  severe stress" },
+        { color: "oklch(0.7 0.04 100)", label: "NDVI < 0.1  bare ground" },
       ]}
     />
   );

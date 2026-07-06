@@ -225,6 +225,9 @@ export function PlantEditorOverlay({
         const body = await res.json().catch(() => ({}));
         throw new Error(`${res.status} — ${body.error ?? res.statusText}`);
       }
+      // Refresh from the server so deletions, and server-assigned plant_ids
+      // for new plants, are reflected in the editor rather than stale local state.
+      await loadPlants();
       setSaveStatus("saved");
       onSaved?.();
       setTimeout(() => setSaveStatus("idle"), 2500);
@@ -392,6 +395,60 @@ export function PlantEditorOverlay({
     addBatch();
   }, [createMarkerInternal]);
 
+  // ─── (Re)load all plant data from the tiler and repopulate the viewport ───
+  // Used on initial map setup and again after a successful save, so the
+  // editor reflects the true server state (deleted plants gone, new plants
+  // carrying their server-assigned plant_id instead of the temp uid()).
+  const loadPlants = useCallback(async () => {
+    const map = mapRef.current;
+    const L   = leafletRef.current;
+    if (!map || !L || !farmId) return;
+
+    const { data: { session } } = await createClient().auth.getSession();
+    const token = session?.access_token ?? "";
+
+    try {
+      const geo = await fetch(`${TILER_BASE}/plants/${farmId}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      }).then(r => r.json());
+
+      const loaded: EditablePlant[] = (geo.features ?? []).map((f: any, i: number) => ({
+        id:           f.properties.plant_id ?? `__plant_${i}`,
+        lat:          f.geometry.coordinates[1],
+        lng:          f.geometry.coordinates[0],
+        plant_id:     f.properties.plant_id,
+        sector_id:    f.properties.sector_id,
+        sector_label: f.properties.sector_label,
+        row_index:    f.properties.row_index,
+        col_index:    f.properties.col_index,
+        area_px:      f.properties.area_px,
+        pixel_x:      f.properties.pixel_x,
+        pixel_y:      f.properties.pixel_y,
+        is_noise:                    f.properties.is_noise                    ?? null,
+        ndvi:                        f.properties.ndvi                        ?? null,
+        ndvi_mean:                   f.properties.ndvi_mean                   ?? null,
+        ndvi_category:               f.properties.ndvi_category               ?? null,
+        predicted_growth_stage_name: f.properties.predicted_growth_stage_name ?? null,
+        predicted_yield_kg:          f.properties.predicted_yield_kg          ?? null,
+        predicted_nitrogen_status:   f.properties.predicted_nitrogen_status   ?? null,
+        ndre:                        f.properties.ndre                        ?? null,
+        ndre_category:               f.properties.ndre_category               ?? null,
+      }));
+
+      // Drop existing markers/selection before repopulating from fresh data
+      for (const marker of markersRef.current.values()) marker.remove();
+      markersRef.current.clear();
+      setSelectedIds(new Set());
+      setSelectedPlant(null);
+
+      allPlantsRef.current    = loaded;
+      allPlantsMapRef.current = new Map(loaded.map(p => [p.id, p]));
+      setTotalCount(loaded.length);
+
+      populateInitialViewport();
+    } catch { /* keep current in-memory data if the refresh fails */ }
+  }, [farmId, populateInitialViewport, setSelectedIds]);
+
   // ─── Map initialisation ───────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -453,42 +510,8 @@ export function PlantEditorOverlay({
       } catch { tilerOffline = true; }
 
       // Load all plant data into refs, then populate the viewport
-      try {
-        const geo = farmId
-          ? await fetch(`${TILER_BASE}/plants/${farmId}`, {
-              headers: token ? { Authorization: `Bearer ${token}` } : {},
-            }).then(r => r.json())
-          : { features: [] };
-        if (!cancelled && geo.features?.length) {
-          const loaded: EditablePlant[] = geo.features.map((f: any, i: number) => ({
-            id:           f.properties.plant_id ?? `__plant_${i}`,
-            lat:          f.geometry.coordinates[1],
-            lng:          f.geometry.coordinates[0],
-            plant_id:     f.properties.plant_id,
-            sector_id:    f.properties.sector_id,
-            sector_label: f.properties.sector_label,
-            row_index:    f.properties.row_index,
-            col_index:    f.properties.col_index,
-            area_px:      f.properties.area_px,
-            pixel_x:      f.properties.pixel_x,
-            pixel_y:      f.properties.pixel_y,
-            is_noise:                    f.properties.is_noise                    ?? null,
-            ndvi:                        f.properties.ndvi                        ?? null,
-            ndvi_mean:                   f.properties.ndvi_mean                   ?? null,
-            ndvi_category:               f.properties.ndvi_category               ?? null,
-            predicted_growth_stage_name: f.properties.predicted_growth_stage_name ?? null,
-            predicted_yield_kg:          f.properties.predicted_yield_kg          ?? null,
-            predicted_nitrogen_status:   f.properties.predicted_nitrogen_status   ?? null,
-            ndre:                        f.properties.ndre                        ?? null,
-            ndre_category:               f.properties.ndre_category               ?? null,
-          }));
-          allPlantsRef.current    = loaded;
-          allPlantsMapRef.current = new Map(loaded.map(p => [p.id, p]));
-          setTotalCount(loaded.length);
-          mapRef.current = map;
-          populateInitialViewport();
-        }
-      } catch { /* no plants available */ }
+      mapRef.current = map;
+      if (!cancelled) await loadPlants();
 
       setStatus(tilerOffline ? "offline" : "ready");
 

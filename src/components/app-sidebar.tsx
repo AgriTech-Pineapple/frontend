@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Sprout, Map, Users, Plane, FileBarChart,
-  Bell, Database, Settings, Leaf, ChevronRight, Tractor, ShieldCheck,
+  Bell, Settings, Leaf, ChevronRight, Tractor, ShieldCheck,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -70,7 +70,6 @@ const sections: { label: string; items: Item[] }[] = [
   {
     label: "System",
     items: [
-      { title: "Data Management", url: "/data", icon: Database },
       { title: "Settings", url: "/settings", icon: Settings },
     ],
   },

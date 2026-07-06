@@ -74,17 +74,18 @@ export function statusColor(status: string | null): string {
 const INDEX_DOMAIN_MIN = -0.2;
 const INDEX_DOMAIN_MAX = 1.0;
 
-/** Diverging red -> yellow -> green ramp over a raw vegetation index. */
+/** Diverging red -> amber -> green ramp over a raw vegetation index. Saturated stops
+ *  (no pale midpoint) so the ramp stays bright and legible over aerial imagery. */
 export function indexRamp(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return "#94a3b8";
   const t = Math.max(0, Math.min(1, (v - INDEX_DOMAIN_MIN) / (INDEX_DOMAIN_MAX - INDEX_DOMAIN_MIN)));
   let r: number, g: number, b: number;
   if (t < 0.5) {
     const k = t / 0.5;
-    r = 215 + (255 - 215) * k; g = 25 + (255 - 25) * k; b = 40 + (191 - 40) * k;
+    r = 220 + (245 - 220) * k; g = 38 + (158 - 38) * k; b = 38 + (11 - 38) * k;
   } else {
     const k = (t - 0.5) / 0.5;
-    r = 255 + (0 - 255) * k; g = 255 + (104 - 255) * k; b = 191 + (55 - 191) * k;
+    r = 245 + (22 - 245) * k; g = 158 + (163 - 158) * k; b = 11 + (74 - 11) * k;
   }
   return `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
 }
@@ -114,12 +115,20 @@ function legendFor(mode: PlantColorMode): MapLegend {
       ],
     };
   }
+  // High/Mid breakpoints per index, matching the thresholds used across the GIS pages
+  // (NDVI: High >= 0.6, Mid >= 0.3 · NDRE: High >= 0.6, Mid >= 0.2 · OSAVI: same as NDVI).
+  const breakpoints: Record<Exclude<PlantColorMode, "composite">, [number, number]> = {
+    ndvi:  [0.6, 0.3],
+    ndre:  [0.6, 0.2],
+    osavi: [0.6, 0.3],
+  };
+  const [high, mid] = breakpoints[mode as Exclude<PlantColorMode, "composite">];
   return {
     title: COLOR_MODE_LABEL[mode],
     swatches: [
-      { color: indexRamp(INDEX_DOMAIN_MIN),                          label: "Low" },
-      { color: indexRamp((INDEX_DOMAIN_MIN + INDEX_DOMAIN_MAX) / 2), label: "Mid" },
-      { color: indexRamp(INDEX_DOMAIN_MAX),                          label: "High" },
+      { color: indexRamp(mid - 0.1),  label: `< ${mid}  Low` },
+      { color: indexRamp((mid + high) / 2), label: `${mid} – ${high}  Mid` },
+      { color: indexRamp(high + 0.1), label: `≥ ${high}  High` },
     ],
   };
 }

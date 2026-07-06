@@ -26,10 +26,9 @@ const TAB_CONFIG: Record<TabKey, { tileLayer: string; legend: { color: string; l
   ndre: {
     tileLayer: "ndre",
     legend: [
-      { color: "oklch(0.45 0.1 145)", label: "0.5+  optimal" },
-      { color: "oklch(0.6 0.09 130)",  label: "0.4 – 0.5" },
-      { color: "oklch(0.74 0.07 110)", label: "0.3 – 0.4" },
-      { color: "oklch(0.8 0.05 90)",   label: "< 0.3  low" },
+      { color: "oklch(0.45 0.1 145)", label: "0.6+  high" },
+      { color: "oklch(0.74 0.07 110)", label: "0.2 – 0.6  medium" },
+      { color: "oklch(0.8 0.05 90)",   label: "< 0.2  low" },
     ],
   },
   savi: {

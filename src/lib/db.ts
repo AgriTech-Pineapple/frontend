@@ -31,7 +31,7 @@ export type Farm = {
   coords: string;
   accent: "sage" | "olive" | "harvest";
   mapLabel: string;
-  blockRows:       { id: string; area: number; plants: number; rows: number; density: number; meanCanopy: number; totalCanopy: number; centroidX: number; centroidY: number }[];
+  blockRows:       { id: string; area: number; plants: number; rows: number; density: number; meanCanopy: number; totalCanopy: number; centroidX: number; centroidY: number; ndvi: number; biomassTonnes: number; healthyCount: number; mildCount: number; severeCount: number }[];
   yearlyYield:     { year: string; expected: number; actual: number | null; crop: string }[];
   monthlyBand:     { m: string; low: number; mid: number; high: number }[];
   densityByBlock:  { block: string; density: number }[];
