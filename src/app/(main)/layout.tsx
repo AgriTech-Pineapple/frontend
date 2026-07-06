@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { TopBar } from "@/components/top-bar";
+import { ChatbotWidget } from "@/components/chatbot-widget";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
@@ -50,6 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </main>
       </SidebarInset>
+      <ChatbotWidget />
     </SidebarProvider>
   );
 }
