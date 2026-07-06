@@ -1,5 +1,7 @@
 ﻿"use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { KpiCard, FieldMap } from "@/components/farm-ui";
@@ -7,13 +9,31 @@ import { TileMap } from "@/components/tile-map";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Maximize2, X } from "lucide-react";
 import { useFarm } from "@/lib/hooks";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 export default function Page() {
   const { farm } = useFarm();
   const router = useRouter();
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    if (!expanded) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setExpanded(false); };
+    document.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [expanded]);
+
+  const HA_TO_ACRE = 2.47105;
+  const surveyedPlants = farm.blockRows.reduce((sum, b) => sum + b.plants, 0);
+  const surveyedArea = farm.blockRows.reduce((sum, b) => sum + b.area, 0) * HA_TO_ACRE;
+  const surveyedCanopy = farm.blockRows.reduce((sum, b) => sum + b.totalCanopy, 0);
+  const surveyedDensity = surveyedArea > 0 ? Math.round(surveyedPlants / surveyedArea) : 0;
 
   return (
     <div className="space-y-8">
@@ -45,7 +65,12 @@ export default function Page() {
         <Card className="p-6 lg:col-span-3 border-border/60 shadow-none">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="font-display text-lg font-semibold">Estate boundary</h3>
-            <Badge variant="outline" className="font-normal">Composite layer</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="font-normal">Composite layer</Badge>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setExpanded(true)}>
+                <Maximize2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
           <TileMap className="h-80 rounded-xl" label={`${farm.name} · composite layer`} />
         </Card>
@@ -101,40 +126,95 @@ export default function Page() {
       </Card>
 
       <Card className="border-border/60 shadow-none">
-        <div className="flex items-center justify-between border-b border-border/60 p-5">
-          <h3 className="font-display text-lg font-semibold">Block parameters</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 p-5">
+          <div>
+            <h3 className="font-display text-lg font-semibold">Block parameters</h3>
+            <p className="text-xs text-muted-foreground">Per-block plant count, canopy &amp; density from the latest drone sector survey</p>
+          </div>
           <p className="text-xs text-muted-foreground">{farm.blockRows.length} of {farm.blocks} shown</p>
+        </div>
+        <div className="grid grid-cols-2 gap-px bg-border/60 sm:grid-cols-4">
+          {[
+            ["Plants surveyed", surveyedPlants.toLocaleString('en-US')],
+            ["Area surveyed", `${surveyedArea.toFixed(4)} ac`],
+            ["Avg density", `${surveyedDensity.toLocaleString('en-US')}/ac`],
+            ["Total canopy", `${surveyedCanopy.toFixed(2)} m²`],
+          ].map(([k, v]) => (
+            <div key={k} className="bg-card px-5 py-3">
+              <p className="text-xs text-muted-foreground">{k}</p>
+              <p className="font-num text-lg font-semibold tabular-nums">{v}</p>
+            </div>
+          ))}
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-5 py-3 text-left font-medium">Block</th>
-                <th className="px-5 py-3 text-left font-medium">Area</th>
                 <th className="px-5 py-3 text-left font-medium">Plants</th>
-                <th className="px-5 py-3 text-left font-medium">Health</th>
-                <th className="px-5 py-3 text-left font-medium">Yield forecast</th>
+                <th className="px-5 py-3 text-left font-medium">Area</th>
+                <th className="px-5 py-3 text-left font-medium">Density</th>
+                <th className="px-5 py-3 text-left font-medium">Mean canopy</th>
+                <th className="px-5 py-3 text-left font-medium">Total canopy</th>
               </tr>
             </thead>
             <tbody>
               {farm.blockRows.map((b) => (
-                <tr key={b.id} className="border-t border-border/60 hover:bg-muted/20">
+                <tr key={b.id} className="border-t border-border/60 hover:bg-muted/20" title={`Centroid ${b.centroidX}, ${b.centroidY}`}>
                   <td className="px-5 py-3 font-medium">{b.id}</td>
-                  <td className="px-5 py-3 tabular-nums text-muted-foreground">{b.area} ha</td>
                   <td className="px-5 py-3 tabular-nums text-muted-foreground">{b.plants.toLocaleString('en-US')}</td>
-                  <td className="px-5 py-3">
-                    <Badge variant="secondary" className={`border-0 font-normal ${
-                      b.health === "Healthy" ? "bg-sage/15 text-sage-deep" :
-                      b.health === "Mild stress" ? "bg-harvest/25 text-clay" : "bg-clay/15 text-clay"
-                    }`}>{b.health}</Badge>
-                  </td>
-                  <td className="px-5 py-3 font-medium tabular-nums">{b.yield}</td>
+                  <td className="px-5 py-3 tabular-nums text-muted-foreground">{(b.area * HA_TO_ACRE).toFixed(4)} ac</td>
+                  <td className="px-5 py-3 tabular-nums text-muted-foreground">{Math.round(b.density / HA_TO_ACRE).toLocaleString('en-US')}/ac</td>
+                  <td className="px-5 py-3 tabular-nums text-muted-foreground">{b.meanCanopy.toLocaleString('en-US')} cm²</td>
+                  <td className="px-5 py-3 font-medium tabular-nums">{b.totalCanopy.toFixed(2)} m²</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
+
+      <Card className="p-6 border-border/60 shadow-none">
+        <div className="mb-4 flex items-end justify-between">
+          <div>
+            <h3 className="font-display text-lg font-semibold">Mean canopy size by block</h3>
+            <p className="text-xs text-muted-foreground">Average canopy area per plant (cm²) — from sector survey</p>
+          </div>
+        </div>
+        <div className="h-64">
+          <ResponsiveContainer>
+            <BarChart data={farm.blockRows}>
+              <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="id" stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--muted-foreground)" fontSize={11} tickLine={false} axisLine={false} />
+              <Tooltip
+                contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }}
+                formatter={(value) => [`${value} cm²`, "Mean canopy"] as [string, string]}
+              />
+              <Bar dataKey="meanCanopy" fill="var(--olive)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
+      {expanded && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className="relative w-[95vw] h-[90vh] rounded-xl overflow-hidden shadow-2xl ring-1 ring-border/60 bg-background"
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setExpanded(false)}
+              aria-label="Close"
+              className="absolute top-3 right-3 z-[9999] flex items-center justify-center rounded-full bg-background/90 p-1.5 shadow-md backdrop-blur hover:bg-muted transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <TileMap className="h-full w-full" label={`${farm.name} · composite layer`} />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

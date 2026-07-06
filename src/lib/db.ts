@@ -31,22 +31,22 @@ export type Farm = {
   coords: string;
   accent: "sage" | "olive" | "harvest";
   mapLabel: string;
-  blockRows:       { id: string; area: number; plants: number; health: string; yield: string }[];
+  blockRows:       { id: string; area: number; plants: number; rows: number; density: number; meanCanopy: number; totalCanopy: number; centroidX: number; centroidY: number }[];
   yearlyYield:     { year: string; expected: number; actual: number | null; crop: string }[];
   monthlyBand:     { m: string; low: number; mid: number; high: number }[];
-  densityByBlock:  { block: string; d: number }[];
-  canopy:          { wk: string; c: number }[];
-  variance:        { block: string; v: number }[];
+  densityByBlock:  { block: string; density: number }[];
+  canopy:          { date: string; pct: number }[];
+  variance:        { sector: string; cv: number }[];
   indexTrend:      { d: string; NDVI: number; NDRE: number; SAVI: number }[];
   history:         { m: string; NDVI: number; NDRE: number; SAVI: number; Yield: number }[];
-  captures:        { date: string; mission: string; area: string; ndviChange: string; remarks: string }[];
+  captures:        { mission: string; date: string; pilot: string; drone: string; coverage: string; gsd: string }[];
   recommendations: { title: string; reason: string }[];
   alerts:          { level: "Critical" | "High" | "Medium" | "Low"; title: string; ago: string }[];
   interpretation:  { heading: string; body: string }[];
   kpis: {
-    plants:  { total: string; avgDensity: string; missing: string };
+    plants:  { total: string; avgDensity: string; missing: string; medianSpacing: string; meanSpacing: string };
     health:  { healthyPct: string; mild: string; severe: string; ndvi: string; ndviDelta: string };
-    growth:  { canopy: string; uniformity: string; variance: string; stage: string; canopyDelta: string };
+    growth:  { canopy: string; uniformity: string; variance: string; stage: string; canopyDelta: string; meanCanopyPerPlant: string; medianCanopyPerPlant: string };
     history: { captures12mo: string; ndviDelta: string; yieldDelta: string; stress: string };
   };
 };
@@ -84,9 +84,9 @@ function timeAgo(iso: string): string {
 }
 
 const EMPTY_KPI: Farm["kpis"] = {
-  plants:  { total: "—", avgDensity: "—", missing: "—" },
+  plants:  { total: "—", avgDensity: "—", missing: "—", medianSpacing: "—", meanSpacing: "—" },
   health:  { healthyPct: "—", mild: "—", severe: "—", ndvi: "—", ndviDelta: "—" },
-  growth:  { canopy: "—", uniformity: "—", variance: "—", stage: "—", canopyDelta: "—" },
+  growth:  { canopy: "—", uniformity: "—", variance: "—", stage: "—", canopyDelta: "—", meanCanopyPerPlant: "—", medianCanopyPerPlant: "—" },
   history: { captures12mo: "—", ndviDelta: "—", yieldDelta: "—", stress: "—" },
 };
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { PageHeader } from "@/components/page-header";
 import { FieldMap } from "@/components/farm-ui";
-import { TileMap, type PlantProperties } from "@/components/tile-map";
+import { TileMap, statusColor, type PlantProperties } from "@/components/tile-map";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -73,6 +73,7 @@ function MapView({
 }: {
   layer: (typeof layers)[number];
   active: LayerKey;
+  /** 0-100, applied to the plant datapoint markers (not the base imagery). */
   opacity: number;
   plantsSeed?: number;
   onPlantSelect: (p: PlantProperties | null) => void;
@@ -85,7 +86,7 @@ function MapView({
         key={active}
         className={className}
         layer={layer.tileLayer}
-        opacity={opacity / 100}
+        plantsOpacity={opacity / 100}
         label={`${layer.label} · ${active}`}
         plantsSeed={plantsSeed}
         onPlantSelect={layer.key === "composite" ? onPlantSelect : undefined}
@@ -157,7 +158,7 @@ export default function Page() {
             <p className="text-xs text-muted-foreground mt-1">Showing {farm.name} · last capture 6 Jun 2026.</p>
           </Card>
           <Card className="p-4 border-border/60 shadow-none">
-            <p className="mb-2 text-sm font-medium">Opacity</p>
+            <p className="mb-2 text-sm font-medium">Datapoint opacity</p>
             <Slider value={[opacity]} onValueChange={(v) => setOpacity(v[0])} max={100} step={1} />
             <p className="mt-3 mb-2 text-sm font-medium">Date</p>
             <select className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-xs">
@@ -186,25 +187,15 @@ export default function Page() {
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
-              {selectedPlant.ndvi_category && (
+              {selectedPlant.health_status && (
                 <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/50">
                   <span
                     className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ background: (() => {
-                      if (selectedPlant.is_noise) return "#94a3b8";
-                      switch (selectedPlant.ndvi_category) {
-                        case "Very Good Vegetation": return "#16a34a";
-                        case "Good Vegetation":      return "#22c55e";
-                        case "Moderate Vegetation":  return "#eab308";
-                        case "Sparse Vegetation":    return "#f97316";
-                        case "Bare / Stressed":      return "#ef4444";
-                        default: return "#22c55e";
-                      }
-                    })() }}
+                    style={{ background: selectedPlant.health_color || statusColor(selectedPlant.health_status) }}
                   />
-                  <span className="text-xs font-medium">{selectedPlant.ndvi_category}</span>
-                  {selectedPlant.ndvi != null && (
-                    <span className="text-[11px] text-muted-foreground ml-auto">NDVI {selectedPlant.ndvi.toFixed(3)}</span>
+                  <span className="text-xs font-medium">{selectedPlant.health_status}</span>
+                  {selectedPlant.health_score != null && (
+                    <span className="text-[11px] text-muted-foreground ml-auto">Score {selectedPlant.health_score.toFixed(0)}</span>
                   )}
                 </div>
               )}
@@ -215,13 +206,14 @@ export default function Page() {
                   ["Row",      selectedPlant.row_index],
                   ["Column",   selectedPlant.col_index],
                   ["NDVI",     selectedPlant.ndvi != null ? selectedPlant.ndvi.toFixed(3) : null],
+                  ["NDRE",     selectedPlant.ndre != null ? selectedPlant.ndre.toFixed(3) : null],
+                  ["OSAVI",    selectedPlant.osavi != null ? selectedPlant.osavi.toFixed(3) : null],
                   ["Health",   selectedPlant.health_status != null && selectedPlant.health_score != null
                                  ? `${selectedPlant.health_status} (${selectedPlant.health_score.toFixed(2)})`
                                  : (selectedPlant.health_status ?? (selectedPlant.health_score != null ? selectedPlant.health_score.toFixed(2) : null))],
                   ["Growth",   selectedPlant.predicted_growth_stage_name],
                   ["Nitrogen", selectedPlant.predicted_nitrogen_status],
                   ["Est. yield", selectedPlant.predicted_yield_kg != null ? `${selectedPlant.predicted_yield_kg.toFixed(1)} kg` : null],
-                  ["NDRE",     selectedPlant.ndre_category],
                 ].map(([label, value]) =>
                   value != null ? (
                     <div key={label as string} className="flex justify-between gap-2">

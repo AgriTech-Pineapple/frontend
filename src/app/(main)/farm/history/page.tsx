@@ -47,9 +47,10 @@ export default function Page() {
               <tr>
                 <th className="px-5 py-3 text-left font-medium">Date</th>
                 <th className="px-5 py-3 text-left font-medium">Mission</th>
+                <th className="px-5 py-3 text-left font-medium">Pilot</th>
+                <th className="px-5 py-3 text-left font-medium">Drone</th>
                 <th className="px-5 py-3 text-left font-medium">Coverage</th>
-                <th className="px-5 py-3 text-left font-medium">NDVI change</th>
-                <th className="px-5 py-3 text-left font-medium w-[40%]">Remarks</th>
+                <th className="px-5 py-3 text-left font-medium">GSD</th>
               </tr>
             </thead>
             <tbody>
@@ -57,9 +58,10 @@ export default function Page() {
                 <tr key={c.mission} className="border-t border-border/60 hover:bg-muted/20">
                   <td className="px-5 py-3 whitespace-nowrap">{c.date}</td>
                   <td className="px-5 py-3 text-muted-foreground">{c.mission}</td>
-                  <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.area}</td>
-                  <td className="px-5 py-3 font-medium tabular-nums">{c.ndviChange}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{c.remarks}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{c.pilot}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{c.drone}</td>
+                  <td className="px-5 py-3 text-muted-foreground tabular-nums">{c.coverage}</td>
+                  <td className="px-5 py-3 font-medium tabular-nums">{c.gsd}</td>
                 </tr>
               ))}
             </tbody>

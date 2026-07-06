@@ -63,9 +63,9 @@ const EMPTY_FARM: Farm = {
   variance: [], indexTrend: [], history: [], captures: [], recommendations: [],
   alerts: [], interpretation: [],
   kpis: {
-    plants:  { total: "—", avgDensity: "—", missing: "—" },
+    plants:  { total: "—", avgDensity: "—", missing: "—", medianSpacing: "—", meanSpacing: "—" },
     health:  { healthyPct: "—", mild: "—", severe: "—", ndvi: "—", ndviDelta: "—" },
-    growth:  { canopy: "—", uniformity: "—", variance: "—", stage: "—", canopyDelta: "—" },
+    growth:  { canopy: "—", uniformity: "—", variance: "—", stage: "—", canopyDelta: "—", meanCanopyPerPlant: "—", medianCanopyPerPlant: "—" },
     history: { captures12mo: "—", ndviDelta: "—", yieldDelta: "—", stress: "—" },
   },
 };

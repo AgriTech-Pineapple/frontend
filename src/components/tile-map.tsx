@@ -10,10 +10,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SlidersHorizontal } from "lucide-react";
-import { MapStatusOverlay } from "@/components/map-status-overlay";
+import { Layers, SlidersHorizontal } from "lucide-react";
+import { MapStatusOverlay, type MapLegend } from "@/components/map-status-overlay";
 
 const TILER_BASE = process.env.NEXT_PUBLIC_TILER_URL;
 
@@ -39,7 +40,10 @@ export type PlantProperties = {
   ndvi:                        number | null;
   ndvi_mean:                   number | null;
   ndvi_category:               string | null;
+  osavi:                       number | null;
   health_status:               string | null;
+  health_status_code:          number | null;
+  health_color:                string | null;
   health_score:                number | null;
   predicted_growth_stage_name: string | null;
   predicted_yield_kg:          number | null;
@@ -48,28 +52,82 @@ export type PlantProperties = {
   ndre_category:               string | null;
 };
 
-function healthColor(props: PlantProperties): string {
-  if (props.is_noise) return "#94a3b8";
-  switch (props.ndvi_category) {
-    case "Very Good Vegetation": return "#16a34a";
-    case "Good Vegetation":      return "#22c55e";
-    case "Moderate Vegetation":  return "#eab308";
-    case "Sparse Vegetation":    return "#f97316";
-    case "Bare / Stressed":      return "#ef4444";
-    default:
-      if (props.ndvi != null) {
-        if (props.ndvi >= 0.5) return "#16a34a";
-        if (props.ndvi >= 0.3) return "#22c55e";
-        if (props.ndvi >= 0.1) return "#eab308";
-        return "#ef4444";
-      }
-      return "#22c55e";
+export type PlantColorMode = "composite" | "ndvi" | "ndre" | "osavi";
+
+/** Falls back to a status-based color when the backend's own health_color is absent. */
+export function statusColor(status: string | null): string {
+  switch (status) {
+    case "Healthy":       return "#16a34a";
+    case "Moderate":      return "#eab308";
+    case "Stressed":      return "#f97316";
+    case "Critical":      return "#ef4444";
+    case "BoundaryLimit": return "#94a3b8";
+    default:              return "#94a3b8";
   }
+}
+
+// Real vegetation index readings (NDVI/NDRE/OSAVI) rarely span the theoretical
+// -1..1 range — actual plant data here falls mostly within roughly -0.2..1.0.
+// Stretching the gradient over that narrower range (instead of -1..1) is what
+// makes red/yellow/green all actually show up instead of everything landing
+// in the green end of the scale and looking uniform.
+const INDEX_DOMAIN_MIN = -0.2;
+const INDEX_DOMAIN_MAX = 1.0;
+
+/** Diverging red -> yellow -> green ramp over a raw vegetation index. */
+export function indexRamp(v: number | null | undefined): string {
+  if (v == null || Number.isNaN(v)) return "#94a3b8";
+  const t = Math.max(0, Math.min(1, (v - INDEX_DOMAIN_MIN) / (INDEX_DOMAIN_MAX - INDEX_DOMAIN_MIN)));
+  let r: number, g: number, b: number;
+  if (t < 0.5) {
+    const k = t / 0.5;
+    r = 215 + (255 - 215) * k; g = 25 + (255 - 25) * k; b = 40 + (191 - 40) * k;
+  } else {
+    const k = (t - 0.5) / 0.5;
+    r = 255 + (0 - 255) * k; g = 255 + (104 - 255) * k; b = 191 + (55 - 191) * k;
+  }
+  return `rgb(${r | 0}, ${g | 0}, ${b | 0})`;
+}
+
+function plantColor(props: PlantProperties, mode: PlantColorMode): string {
+  switch (mode) {
+    case "ndvi":  return indexRamp(props.ndvi);
+    case "ndre":  return indexRamp(props.ndre);
+    case "osavi": return indexRamp(props.osavi);
+    default:      return props.health_color || statusColor(props.health_status);
+  }
+}
+
+const COLOR_MODE_LABEL: Record<PlantColorMode, string> = {
+  composite: "Composite", ndvi: "NDVI", ndre: "NDRE", osavi: "OSAVI",
+};
+
+function legendFor(mode: PlantColorMode): MapLegend {
+  if (mode === "composite") {
+    return {
+      title: "Composite · health",
+      swatches: [
+        { color: "#16a34a", label: "Healthy" },
+        { color: "#eab308", label: "Moderate" },
+        { color: "#f97316", label: "Stressed" },
+        { color: "#ef4444", label: "Critical" },
+      ],
+    };
+  }
+  return {
+    title: COLOR_MODE_LABEL[mode],
+    swatches: [
+      { color: indexRamp(INDEX_DOMAIN_MIN),                          label: "Low" },
+      { color: indexRamp((INDEX_DOMAIN_MIN + INDEX_DOMAIN_MAX) / 2), label: "Mid" },
+      { color: indexRamp(INDEX_DOMAIN_MAX),                          label: "High" },
+    ],
+  };
 }
 
 export function TileMap({
   className,
   opacity = 1,
+  plantsOpacity = 1,
   label,
   layer,
   onPlantSelect,
@@ -77,8 +135,10 @@ export function TileMap({
   plantsSeed = 0,
 }: {
   className?: string;
-  /** 0–1 */
+  /** 0–1, applied to the raster tile overlay. */
   opacity?: number;
+  /** 0–1, applied to the plant datapoint markers. */
+  plantsOpacity?: number;
   label?: string;
   /** Named tile layer (e.g. "ndvi", "ndre", "osavi"). Omit for the base orthomosaic. */
   layer?: string;
@@ -104,9 +164,14 @@ export function TileMap({
   const onViewChangeRef   = useRef(onViewChange);
   // Ref keeps the async plant-fetch closure in sync with current showPlants state
   const showPlantsRef     = useRef(true);
+  // Refs keep the pointToLayer closures (only run at feature-creation time) in sync
+  // with the latest color mode / marker opacity without needing to recreate markers.
+  const plantColorModeRef = useRef<PlantColorMode>("composite");
+  const plantsOpacityRef  = useRef(plantsOpacity);
 
   const [status, setStatus]       = useState<"loading" | "ready" | "offline">("loading");
   const [showPlants, setShowPlants] = useState(true);
+  const [plantColorMode, setPlantColorMode] = useState<PlantColorMode>("composite");
   // null = no plant batch in progress; 0-100 = percent of features added to the map so far
   const [plantsProgress, setPlantsProgress] = useState<number | null>(null);
 
@@ -142,10 +207,28 @@ export function TileMap({
     else            plantsLayer.remove();
   }, [showPlants]);
 
+  // Recolor existing markers in place when the datapoint color mode changes —
+  // avoids refetching/rebuilding thousands of markers just to swap their fill.
+  useEffect(() => {
+    plantColorModeRef.current = plantColorMode;
+    plantsLayerRef.current?.eachLayer((l: any) => {
+      const props = l.feature?.properties as PlantProperties | undefined;
+      if (!props) return;
+      l.setStyle({ fillColor: plantColor(props, plantColorMode) });
+    });
+  }, [plantColorMode]);
+
+  // Adjust marker opacity in place — independent of the raster tile opacity below.
+  useEffect(() => {
+    plantsOpacityRef.current = plantsOpacity;
+    plantsLayerRef.current?.setStyle({ opacity: plantsOpacity, fillOpacity: plantsOpacity });
+  }, [plantsOpacity]);
+
   useEffect(() => {
     if (!farmId || !containerRef.current || mapRef.current) return;
 
     let map: Map;
+    let resizeObserver: ResizeObserver | undefined;
     // Prevents the async IIFE from initialising the map after the effect has
     // been cleaned up (React 18 Strict Mode double-invokes effects).
     let cancelled = false;
@@ -202,6 +285,14 @@ export function TileMap({
 
         L.control.zoom({ position: "bottomright" }).addTo(map);
 
+        // Leaflet only measures the container once, at construction time. If the
+        // container's real size settles later (grid/flex layout resolving, a modal
+        // finishing its transition, a sidebar toggle) the tile grid is never told
+        // and stays positioned for the old size. A ResizeObserver keeps it in sync
+        // for the whole lifetime of the map, not just the initial mount.
+        resizeObserver = new ResizeObserver(() => map.invalidateSize());
+        resizeObserver.observe(containerRef.current);
+
         // Esri World Imagery satellite base — no API key required
         // Esri's URL uses /{z}/{y}/{x} (row before column), which Leaflet resolves correctly
         L.tileLayer(
@@ -241,11 +332,11 @@ export function TileMap({
                 const props = feat.properties as PlantProperties;
                 const marker = L.circleMarker(latlng, {
                   radius: 4,
-                  fillColor: healthColor(props),
+                  fillColor: plantColor(props, plantColorModeRef.current),
                   color: "#fff",
                   weight: 1,
-                  opacity: 1,
-                  fillOpacity: 0.85,
+                  opacity: plantsOpacityRef.current,
+                  fillOpacity: plantsOpacityRef.current,
                 });
 
                 const categoryLine = props.ndvi_category
@@ -303,6 +394,7 @@ export function TileMap({
 
     return () => {
       cancelled = true;
+      resizeObserver?.disconnect();
       // eslint-disable-next-line react-hooks/exhaustive-deps
       map?.remove();
       mapRef.current         = null;
@@ -345,8 +437,8 @@ export function TileMap({
           pointToLayer: (feat: any, latlng: any) => {
             const props = feat.properties as PlantProperties;
             const marker = L.circleMarker(latlng, {
-              radius: 4, fillColor: healthColor(props),
-              color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.85,
+              radius: 4, fillColor: plantColor(props, plantColorModeRef.current),
+              color: "#fff", weight: 1, opacity: plantsOpacityRef.current, fillOpacity: plantsOpacityRef.current,
             });
             const categoryLine = props.ndvi_category
               ? `<br/><span style="color:#999;font-size:0.85em">${props.ndvi_category}</span>`
@@ -386,10 +478,43 @@ export function TileMap({
 
   return (
     <div className={cn("relative isolate overflow-hidden", className)}>
-      <MapStatusOverlay status={status} label={label} plantsProgress={plantsProgress} />
+      <MapStatusOverlay
+        status={status}
+        label={label}
+        plantsProgress={plantsProgress}
+        legend={showPlants ? legendFor(plantColorMode) : null}
+      />
 
-      {/* View-options dropdown — floats above the Leaflet panes (max z-index ~800) */}
-      <div className="absolute top-3 right-3 z-[1000]">
+      {/* Layers + view-options dropdowns — float above the Leaflet panes (max z-index ~800) */}
+      <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 bg-background/85 backdrop-blur shadow-sm border border-border/60 hover:bg-background"
+            >
+              <Layers className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          {/* z-index must clear the fullscreen map modal's z-[9999] overlay — this content
+              renders through a Radix portal straight to <body>, as a sibling of that modal,
+              so it needs a higher value to win the stacking order when both are open. */}
+          <DropdownMenuContent align="end" className="w-44 z-[10000]">
+            <DropdownMenuLabel className="text-xs">Datapoint color</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuRadioGroup
+              value={plantColorMode}
+              onValueChange={(v) => setPlantColorMode(v as PlantColorMode)}
+            >
+              <DropdownMenuRadioItem value="composite">Composite</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="ndvi">NDVI</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="ndre">NDRE</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="osavi">OSAVI</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -400,7 +525,7 @@ export function TileMap({
               <SlidersHorizontal className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 z-[1001]">
+          <DropdownMenuContent align="end" className="w-52 z-[10000]">
             <DropdownMenuLabel className="text-xs">View options</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuCheckboxItem

@@ -1,5 +1,10 @@
 "use client";
 
+export type MapLegend = {
+  title: string;
+  swatches: { color: string; label: string }[];
+};
+
 // Overlays rendered on top of the Leaflet viewport. All positioned at z-[900] —
 // above Leaflet's internal panes (max z-index 700) so nothing the map draws
 // (tiles, markers, tooltips) can cover these, but below floating controls
@@ -8,11 +13,14 @@ export function MapStatusOverlay({
   status,
   label,
   plantsProgress,
+  legend,
 }: {
   status: "loading" | "ready" | "offline";
   label?: string;
   /** null = no plant batch in progress; 0-100 = percent of features added to the map so far */
   plantsProgress: number | null;
+  /** Datapoint color legend for the currently active color mode; omit/null to hide. */
+  legend?: MapLegend | null;
 }) {
   return (
     <>
@@ -30,9 +38,26 @@ export function MapStatusOverlay({
         </div>
       )}
 
-      {label && (
-        <div className="absolute bottom-3 left-3 z-[900] rounded-md border border-white/15 bg-background/40 px-2.5 py-1 text-[11px] font-medium shadow-lg backdrop-blur-xl pointer-events-none">
-          {label}
+      {(label || legend) && (
+        <div className="absolute bottom-3 left-3 z-[900] flex flex-col items-start gap-1.5">
+          {legend && (
+            <div className="rounded-md border border-border bg-background px-2.5 py-1.5 text-[11px] shadow-lg pointer-events-none">
+              <div className="mb-1 font-medium">{legend.title}</div>
+              <div className="flex items-center gap-2.5">
+                {legend.swatches.map((s) => (
+                  <span key={s.label} className="flex items-center gap-1">
+                    <span className="h-2 w-2 rounded-full shrink-0" style={{ background: s.color }} />
+                    <span className="text-muted-foreground">{s.label}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {label && (
+            <div className="rounded-md border border-white/15 bg-background/40 px-2.5 py-1 text-[11px] font-medium shadow-lg backdrop-blur-xl pointer-events-none">
+              {label}
+            </div>
+          )}
         </div>
       )}
 

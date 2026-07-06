@@ -34,7 +34,7 @@ export function FieldMap({
   className, overlay = "ndvi", showPins = true, label,
 }: {
   className?: string;
-  overlay?: "ndvi" | "ndre" | "health" | "terrain" | "yield" | "plain";
+  overlay?: "ndvi" | "ndre" | "health" | "terrain" | "yield" | "plain" | "none";
   showPins?: boolean;
   label?: string;
 }) {
@@ -45,6 +45,7 @@ export function FieldMap({
     terrain: "radial-gradient(circle at 30% 40%, oklch(0.65 0.06 80 / .8), transparent 40%), radial-gradient(circle at 60% 30%, oklch(0.55 0.05 90 / .8), transparent 38%), radial-gradient(circle at 75% 70%, oklch(0.45 0.04 100 / .8), transparent 40%)",
     yield: "radial-gradient(circle at 30% 30%, oklch(0.78 0.14 90 / .85), transparent 38%), radial-gradient(circle at 70% 60%, oklch(0.68 0.16 75 / .8), transparent 40%), radial-gradient(circle at 50% 80%, oklch(0.6 0.15 50 / .75), transparent 32%)",
     plain: "radial-gradient(circle at 40% 50%, oklch(0.85 0.06 130 / .6), transparent 60%)",
+    none: "",
   };
   return (
     <div className={cn("relative overflow-hidden rounded-xl border border-border/60 topo-bg", className)}>
@@ -73,9 +74,6 @@ export function FieldMap({
           {label}
         </div>
       )}
-      <div className="absolute right-3 top-3 rounded-md bg-background/85 px-2 py-1 text-[10px] uppercase tracking-wider text-muted-foreground backdrop-blur">
-        14.227 ha · 18°N 121°E
-      </div>
     </div>
   );
 }

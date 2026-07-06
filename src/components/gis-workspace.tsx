@@ -130,7 +130,6 @@ export function GisWorkspace({
           <div className="border-t border-border/60 px-4 py-2 flex items-center justify-between text-xs text-muted-foreground">
             <span>EPSG:4326 · WGS 84</span>
             <LegendSwatch items={legend.slice(0, 4)} />
-            <span>Cursor 18.4127°N 121.8842°E</span>
           </div>
         </Card>
       </div>
