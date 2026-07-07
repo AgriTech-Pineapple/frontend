@@ -13,8 +13,14 @@ import {
   DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Layers, SlidersHorizontal } from "lucide-react";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import { Info, Layers, SlidersHorizontal } from "lucide-react";
 import { MapStatusOverlay, type MapLegend } from "@/components/map-status-overlay";
+import InfoCard from "@/components/ui/info-card";
 
 const TILER_BASE = process.env.NEXT_PUBLIC_TILER_URL;
 
@@ -496,6 +502,26 @@ export function TileMap({
 
       {/* Layers + view-options dropdowns — float above the Leaflet panes (max z-index ~800) */}
       <div className="absolute top-3 right-3 z-[1000] flex items-center gap-1.5">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 bg-background/85 backdrop-blur shadow-sm border border-border/60 hover:bg-background"
+            >
+              <Info className="h-3.5 w-3.5" />
+            </Button>
+          </PopoverTrigger>
+          
+          <PopoverContent
+            align="end"
+            side="bottom"
+            sideOffset={8}
+            className="w-auto border-none bg-transparent p-0 shadow-none"
+          >
+            <InfoCard />
+          </PopoverContent>
+        </Popover>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
