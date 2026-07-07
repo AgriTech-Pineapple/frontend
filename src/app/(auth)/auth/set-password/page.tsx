@@ -89,13 +89,13 @@ export default function SetPasswordPage() {
       return;
     }
 
-    // Same routing rule as login: admins land on the admin console
+    // Same routing rule as login: platform admins land on the admin console
     const { data: profile } = await supabase
       .from("profiles")
-      .select("user_type")
+      .select("is_platform_admin")
       .eq("id", data.user.id)
       .single();
-    router.push(profile?.user_type === "admin" ? "/admin" : "/");
+    router.push(profile?.is_platform_admin ? "/admin" : "/");
     router.refresh();
   }
 

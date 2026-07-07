@@ -2,17 +2,113 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { Building2, MapPin, Sprout, Tractor, Search } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Building2, MapPin, Sprout, Tractor, Search, Plus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getAdminOrganizations } from "@/lib/admin";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getAdminOrganizations, createOrganization, type CreateOrganizationInput,
+} from "@/lib/admin";
+
+function AddOrganizationDialog({
+  open, onOpenChange, onCreated,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onCreated: (orgId: string) => void;
+}) {
+  const [error, setError] = useState<string | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (input: CreateOrganizationInput) => createOrganization(input),
+    onSuccess: (orgId) => {
+      onCreated(orgId);
+      onOpenChange(false);
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    const form = new FormData(e.currentTarget);
+    mutation.mutate({
+      name: (form.get("name") as string).trim(),
+      country: (form.get("country") as string).trim(),
+      contactEmail: (form.get("contactEmail") as string).trim(),
+      totalArea: (form.get("totalArea") as string).trim(),
+      crops: (form.get("crops") as string)
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean),
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setError(null); }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add organization</DialogTitle>
+          <DialogDescription>
+            Creates a new client organization. Next, register its org admin from
+            Users → Add user (account type: organization member, role: Org Admin).
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="org-name">Name</Label>
+            <Input id="org-name" name="name" required placeholder="Highland Estates Ltd." />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="org-country">Country</Label>
+              <Input id="org-country" name="country" placeholder="Malaysia" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="org-email">Contact email</Label>
+              <Input id="org-email" name="contactEmail" type="email" placeholder="ops@estate.com" />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="org-crops">Crops</Label>
+              <Input id="org-crops" name="crops" placeholder="Pineapple, Banana" />
+              <p className="text-xs text-muted-foreground">Comma-separated.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="org-area">Total area</Label>
+              <Input id="org-area" name="totalArea" placeholder="120 ha" />
+            </div>
+          </div>
+
+          {error && (
+            <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+          )}
+
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={mutation.isPending}>
+              {mutation.isPending ? "Creating…" : "Create organization"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function AdminDashboardPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const { data: orgs, isLoading } = useQuery({
     queryKey: ["admin-organizations"],
     queryFn: getAdminOrganizations,
@@ -29,16 +125,30 @@ export default function AdminDashboardPage() {
         title="Organizations"
         description="Every organization on the platform. Open one to see its farms and estate stats."
         actions={
-          <div className="relative w-64">
-            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search organizations…"
-              className="pl-8"
-            />
-          </div>
+          <>
+            <div className="relative w-64">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search organizations…"
+                className="pl-8"
+              />
+            </div>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" /> Add organization
+            </Button>
+          </>
         }
+      />
+
+      <AddOrganizationDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["admin-organizations"] });
+          qc.invalidateQueries({ queryKey: ["admin-stats"] });
+        }}
       />
 
       {isLoading ? (

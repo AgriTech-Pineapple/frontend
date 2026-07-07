@@ -25,9 +25,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import {
   getServiceRequests, updateServiceRequest, deleteServiceRequest, approveAndInvite,
-  approveAndGetLink, type InviteLink, type ServiceRequest, type ServiceRequestStatus,
+  approveAndGetLink, getAdminOrganizations,
+  type InviteLink, type ServiceRequest, type ServiceRequestStatus,
 } from "@/lib/admin";
+import { ORG_ROLE_LABEL, type OrgRole } from "@/lib/team";
 import { STATUS_STYLES } from "./status";
 
 const FILTERS = ["all", "pending", "contacted", "approved", "rejected"] as const;
@@ -42,10 +48,22 @@ export default function AccessRequestsPage() {
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<(InviteLink & { email: string }) | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  // Approval flow: the approver picks the org + role before the invite goes out
+  const [approveTarget, setApproveTarget] = useState<{
+    request: ServiceRequest;
+    mode: "email" | "link";
+  } | null>(null);
+  const [approveOrgId, setApproveOrgId] = useState<string>("");
+  const [approveRole, setApproveRole] = useState<OrgRole>("farm_manager");
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["service-requests"],
     queryFn: getServiceRequests,
+  });
+
+  const { data: organizations } = useQuery({
+    queryKey: ["admin-organizations"],
+    queryFn: getAdminOrganizations,
   });
 
   const invalidate = () => {
@@ -61,10 +79,18 @@ export default function AccessRequestsPage() {
   });
 
   const inviteMutation = useMutation({
-    mutationFn: (request: ServiceRequest) => approveAndInvite(request.id),
-    onSuccess: (invited, request) => {
+    mutationFn: ({ request, organizationId, orgRole }: {
+      request: ServiceRequest; organizationId: string; orgRole: OrgRole;
+    }) =>
+      approveAndInvite(request.id, {
+        organizationId,
+        orgRole,
+        scopeAllFarms: orgRole === "farm_manager",
+      }),
+    onSuccess: (invited, { request }) => {
       invalidate();
       setActionError(null);
+      setApproveTarget(null);
       setInviteNotice(
         invited
           ? `Invite sent to ${request.email}. They'll get an email link to set their password.`
@@ -88,11 +114,19 @@ export default function AccessRequestsPage() {
   });
 
   const linkMutation = useMutation({
-    mutationFn: (request: ServiceRequest) => approveAndGetLink(request.id),
-    onSuccess: (result, request) => {
+    mutationFn: ({ request, organizationId, orgRole }: {
+      request: ServiceRequest; organizationId: string; orgRole: OrgRole;
+    }) =>
+      approveAndGetLink(request.id, {
+        organizationId,
+        orgRole,
+        scopeAllFarms: orgRole === "farm_manager",
+      }),
+    onSuccess: (result, { request }) => {
       invalidate();
       setActionError(null);
       setInviteNotice(null);
+      setApproveTarget(null);
       setLinkCopied(false);
       setInviteLink({ ...result, email: request.email });
       navigator.clipboard?.writeText(result.link).then(
@@ -213,13 +247,13 @@ export default function AccessRequestsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={inviteMutation.isPending}
-                          onClick={() => inviteMutation.mutate(r)}
+                          onClick={() => setApproveTarget({ request: r, mode: "email" })}
                         >
                           <CheckCircle2 className="mr-2 h-4 w-4" /> Approve &amp; invite
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={linkMutation.isPending}
-                          onClick={() => linkMutation.mutate(r)}
+                          onClick={() => setApproveTarget({ request: r, mode: "link" })}
                         >
                           <Link2 className="mr-2 h-4 w-4" /> Approve &amp; copy link
                         </DropdownMenuItem>
@@ -252,6 +286,71 @@ export default function AccessRequestsPage() {
           </Table>
         </div>
       )}
+
+      {/* Approve dialog: pick the org + role the new account gets */}
+      <Dialog open={approveTarget !== null} onOpenChange={(open) => !open && setApproveTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Approve {approveTarget?.request.firstName} {approveTarget?.request.lastName}
+            </DialogTitle>
+            <DialogDescription>
+              Choose which organization they join and their role in it.
+              {approveTarget?.mode === "email"
+                ? " They'll get an invite email to set their password."
+                : " You'll get an invite link to share yourself."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Organization</Label>
+              <Select value={approveOrgId} onValueChange={setApproveOrgId}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(organizations ?? []).map((org) => (
+                    <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={approveRole} onValueChange={(v) => setApproveRole(v as OrgRole)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(ORG_ROLE_LABEL) as OrgRole[]).map((r) => (
+                    <SelectItem key={r} value={r}>{ORG_ROLE_LABEL[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveTarget(null)}>Cancel</Button>
+            <Button
+              disabled={!approveOrgId || inviteMutation.isPending || linkMutation.isPending}
+              onClick={() => {
+                if (!approveTarget) return;
+                const payload = {
+                  request: approveTarget.request,
+                  organizationId: approveOrgId,
+                  orgRole: approveRole,
+                };
+                if (approveTarget.mode === "email") inviteMutation.mutate(payload);
+                else linkMutation.mutate(payload);
+              }}
+            >
+              {inviteMutation.isPending || linkMutation.isPending
+                ? "Approving…"
+                : approveTarget?.mode === "email" ? "Approve & send invite" : "Approve & get link"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Notes dialog */}
       <Dialog open={notesTarget !== null} onOpenChange={(open) => !open && setNotesTarget(null)}>

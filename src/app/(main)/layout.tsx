@@ -24,10 +24,21 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("user_type")
+    .select("is_platform_admin")
     .eq("id", user.id)
     .single();
-  const isAdmin = profile?.user_type === "admin";
+  const isPlatformAdmin = !!profile?.is_platform_admin;
+
+  // The org role (org_admin / farm_manager / worker / drone_operator) lives on
+  // the membership row — a separate concept from the platform (drone company)
+  // admin flag. Users can belong to several orgs; the oldest membership drives
+  // the sidebar. Platform admins get the full nav regardless.
+  const { data: memberships } = await supabase
+    .from("organization_members")
+    .select("role, joined_at")
+    .eq("user_id", user.id)
+    .order("joined_at");
+  const orgRole = memberships?.[0]?.role ?? null;
 
   const userInfo = user
     ? {
@@ -42,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <SidebarProvider>
-      <AppSidebar user={userInfo} isAdmin={isAdmin} />
+      <AppSidebar user={userInfo} isPlatformAdmin={isPlatformAdmin} orgRole={orgRole} />
       <SidebarInset className="bg-background">
         <TopBar />
         <main className="flex-1">

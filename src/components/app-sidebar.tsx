@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Sprout, Map, Users, Plane, FileBarChart,
-  Bell, Settings, Leaf, ChevronRight, Tractor, ShieldCheck,
+  Bell, Settings, Leaf, ChevronRight, Tractor, ShieldCheck, UserCog,
 } from "lucide-react";
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent,
@@ -21,62 +21,83 @@ type UserInfo = {
   initials: string;
 } | null;
 
-const sections: { label: string; items: Item[] }[] = [
-  {
-    label: "Overview",
-    items: [
-      { title: "Dashboard", url: "/", icon: LayoutDashboard },
-      { title: "Manage Farms", url: "/farms", icon: Tractor },
-    ],
-  },
-  {
-    label: "Intelligence",
-    items: [
-      {
-        title: "Farm Intelligence", url: "/farm/overview", icon: Sprout,
-        children: [
-          { title: "Overview", url: "/farm/overview" },
-          { title: "Plant Count", url: "/farm/plants" },
-          { title: "Health Analysis", url: "/farm/health" },
-          { title: "Growth Analysis", url: "/farm/growth" },
-          { title: "Yield Forecast", url: "/farm/yield" },
-          { title: "Historical Monitoring", url: "/farm/history" },
-        ],
-      },
-      { title: "GIS Mapping", url: "/gis/map", icon: Map },
-    ],
-  },
-  {
-    label: "Operations",
-    items: [
-      { title: "Workforce", url: "/workforce", icon: Users },
-      { title: "Drone Operations", url: "/drones", icon: Plane },
-    ],
-  },
-  {
-    label: "Insights",
-    items: [
-      {
-        title: "Reports", url: "/reports/farm", icon: FileBarChart,
-        children: [
-          { title: "Farm Reports", url: "/reports/farm" },
-          { title: "Workforce Reports", url: "/reports/workforce" },
-          { title: "Executive Reports", url: "/reports/executive" },
-        ],
-      },
-      { title: "Alerts", url: "/alerts", icon: Bell },
-    ],
-  },
-  {
-    label: "System",
-    items: [
-      { title: "Settings", url: "/settings", icon: Settings },
-    ],
-  },
-];
+/** org_admin | farm_manager | worker | drone_operator, or null (no org yet) */
+type OrgRole = string | null;
 
-export function AppSidebar({ user, isAdmin }: { user?: UserInfo; isAdmin?: boolean }) {
+function buildSections(orgRole: OrgRole, isPlatformAdmin?: boolean): { label: string; items: Item[] }[] {
+  // Platform admins see the full org nav; org roles get progressively less.
+  const role = isPlatformAdmin ? "org_admin" : orgRole;
+  const isOrgAdmin = role === "org_admin";
+  const isWorker = role === "worker";
+  const isDroneOperator = role === "drone_operator";
+
+  const farmIntelligence: Item = {
+    title: "Farm Intelligence", url: "/farm/overview", icon: Sprout,
+    children: [
+      { title: "Overview", url: "/farm/overview" },
+      { title: "Plant Count", url: "/farm/plants" },
+      { title: "Health Analysis", url: "/farm/health" },
+      { title: "Growth Analysis", url: "/farm/growth" },
+      { title: "Yield Forecast", url: "/farm/yield" },
+      { title: "Historical Monitoring", url: "/farm/history" },
+    ],
+  };
+
+  const sections: { label: string; items: Item[] }[] = [
+    {
+      label: "Overview",
+      items: [
+        { title: "Dashboard", url: "/", icon: LayoutDashboard },
+        ...(!isWorker && !isDroneOperator
+          ? [{ title: "Manage Farms", url: "/farms", icon: Tractor }]
+          : []),
+      ],
+    },
+    {
+      label: "Intelligence",
+      items: [
+        ...(!isWorker && !isDroneOperator ? [farmIntelligence] : []),
+        ...(!isWorker ? [{ title: "GIS Mapping", url: "/gis/map", icon: Map }] : []),
+      ],
+    },
+    {
+      label: "Operations",
+      items: [
+        ...(!isDroneOperator ? [{ title: "Workforce", url: "/workforce", icon: Users }] : []),
+        ...(!isWorker ? [{ title: "Drone Operations", url: "/drones", icon: Plane }] : []),
+        ...(isOrgAdmin ? [{ title: "Users & Roles", url: "/users", icon: UserCog }] : []),
+      ],
+    },
+    {
+      label: "Insights",
+      items: [
+        ...(!isWorker && !isDroneOperator
+          ? [{
+              title: "Reports", url: "/reports/farm", icon: FileBarChart,
+              children: [
+                { title: "Farm Reports", url: "/reports/farm" },
+                { title: "Workforce Reports", url: "/reports/workforce" },
+                { title: "Executive Reports", url: "/reports/executive" },
+              ],
+            }]
+          : []),
+        ...(!isWorker ? [{ title: "Alerts", url: "/alerts", icon: Bell }] : []),
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { title: "Settings", url: "/settings", icon: Settings },
+      ],
+    },
+  ];
+
+  return sections.filter((s) => s.items.length > 0);
+}
+
+export function AppSidebar({ user, isPlatformAdmin, orgRole }: { user?: UserInfo; isPlatformAdmin?: boolean; orgRole?: OrgRole }) {
   const pathname = usePathname();
+  const sections = buildSections(orgRole ?? null, isPlatformAdmin);
   const displayName = user?.fullName ?? "User";
   const displayRole = user?.role ?? "Estate Manager";
   const displayInitials = user?.initials ?? "U";
@@ -146,7 +167,7 @@ export function AppSidebar({ user, isAdmin }: { user?: UserInfo; isAdmin?: boole
           </SidebarGroup>
         ))}
 
-        {isAdmin && (
+        {isPlatformAdmin && (
           <SidebarGroup>
             <SidebarGroupLabel className="text-[11px] uppercase tracking-wider text-muted-foreground/90">
               Administration

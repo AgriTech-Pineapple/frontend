@@ -17,7 +17,15 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { getRoles, registerUser, type RegisterUserInput } from "@/lib/admin";
+import { getAdminOrganizations, registerUser, type RegisterUserInput } from "@/lib/admin";
+import { ORG_ROLE_LABEL, type OrgRole } from "@/lib/team";
+
+const ROLE_DESCRIPTION: Record<OrgRole, string> = {
+  org_admin: "Full control of the organization — farms, members, settings.",
+  farm_manager: "Manages the farms they're assigned to.",
+  worker: "Field worker — own attendance, tasks and forms.",
+  drone_operator: "Flies missions and uploads captures for the org.",
+};
 
 const METHODS = [
   {
@@ -45,12 +53,17 @@ export default function RegisterUserPage() {
   const qc = useQueryClient();
 
   const [method, setMethod] = useState<RegisterUserInput["method"]>("link");
-  const [userType, setUserType] = useState("drone_operator");
+  const [accountType, setAccountType] = useState<"org_member" | "platform_admin">("org_member");
+  const [orgRole, setOrgRole] = useState<OrgRole>("org_admin");
+  const [organizationId, setOrganizationId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<{ email: string; link: string } | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
 
-  const { data: roles } = useQuery({ queryKey: ["user-roles"], queryFn: getRoles });
+  const { data: organizations } = useQuery({
+    queryKey: ["admin-organizations"],
+    queryFn: getAdminOrganizations,
+  });
 
   const mutation = useMutation({
     mutationFn: (input: RegisterUserInput) => registerUser(input),
@@ -74,13 +87,19 @@ export default function RegisterUserPage() {
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+    if (accountType === "org_member" && !organizationId) {
+      setError("Pick the organization this user belongs to.");
+      return;
+    }
     const form = new FormData(e.currentTarget);
     mutation.mutate({
       firstName: (form.get("firstName") as string).trim(),
       lastName: (form.get("lastName") as string).trim(),
       email: (form.get("email") as string).trim(),
       phone: (form.get("phone") as string).trim(),
-      userType,
+      ...(accountType === "platform_admin"
+        ? { platformAdmin: true }
+        : { organizationId, orgRole, scopeAllFarms: orgRole === "farm_manager" }),
       method,
       password: method === "password" ? (form.get("password") as string) : undefined,
     });
@@ -127,23 +146,78 @@ export default function RegisterUserPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={userType} onValueChange={setUserType}>
-                <SelectTrigger className="w-full sm:w-[280px]">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(roles ?? []).map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                {(roles ?? []).find((r) => r.id === userType)?.description}
-              </p>
+              <Label>Account type</Label>
+              <RadioGroup
+                value={accountType}
+                onValueChange={(v) => setAccountType(v as typeof accountType)}
+                className="gap-3"
+              >
+                <label
+                  htmlFor="type-org"
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                    accountType === "org_member" ? "border-primary bg-primary/5" : "border-border/60 hover:bg-muted/40"
+                  }`}
+                >
+                  <RadioGroupItem value="org_member" id="type-org" className="mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Organization member</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Belongs to one organization with a role inside it.
+                    </p>
+                  </div>
+                </label>
+                <label
+                  htmlFor="type-platform"
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                    accountType === "platform_admin" ? "border-primary bg-primary/5" : "border-border/60 hover:bg-muted/40"
+                  }`}
+                >
+                  <RadioGroupItem value="platform_admin" id="type-platform" className="mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Platform admin (Drone Company)</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Full access to every organization and the admin console.
+                    </p>
+                  </div>
+                </label>
+              </RadioGroup>
             </div>
+
+            {accountType === "org_member" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Organization</Label>
+                  <Select value={organizationId} onValueChange={setOrganizationId}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select organization" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(organizations ?? []).map((org) => (
+                        <SelectItem key={org.id} value={org.id}>
+                          {org.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Role in the organization</Label>
+                  <Select value={orgRole} onValueChange={(v) => setOrgRole(v as OrgRole)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(Object.keys(ORG_ROLE_LABEL) as OrgRole[]).map((r) => (
+                        <SelectItem key={r} value={r}>
+                          {ORG_ROLE_LABEL[r]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{ROLE_DESCRIPTION[orgRole]}</p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>How do they get access?</Label>

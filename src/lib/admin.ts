@@ -15,6 +15,13 @@ export type ServiceRequest = {
   createdAt: string;
 };
 
+export type AdminUserMembership = {
+  organizationId: string;
+  organizationName: string;
+  /** org_admin | farm_manager | worker | drone_operator */
+  role: string;
+};
+
 export type AdminUser = {
   id: string;
   email: string;
@@ -22,7 +29,8 @@ export type AdminUser = {
   lastName: string;
   displayName: string;
   phone: string;
-  userType: string;
+  isPlatformAdmin: boolean;
+  memberships: AdminUserMembership[];
   createdAt: string;
   lastSignInAt: string | null;
 };
@@ -113,16 +121,28 @@ export type InviteLink = {
   alreadyRegistered: boolean;
 };
 
+export type ApproveOptions = {
+  /** organization the approved user joins */
+  organizationId: string;
+  /** org_admin | farm_manager | worker | drone_operator */
+  orgRole: string;
+  /** farm scope, farm_manager only */
+  farmIds?: string[];
+  scopeAllFarms?: boolean;
+};
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 async function invokeInviteFunction(
   requestId: string,
-  mode: "email" | "link"
+  mode: "email" | "link",
+  options: ApproveOptions
 ): Promise<any> {
   const supabase = createClient();
   const { data, error } = await supabase.functions.invoke("invite-user", {
     body: {
       requestId,
       mode,
+      ...options,
       redirectTo: `${window.location.origin}/auth/set-password`,
     },
   });
@@ -142,11 +162,15 @@ async function invokeInviteFunction(
 
 /**
  * Approve a request and send a Supabase invite email via the `invite-user`
- * edge function (runs with the service role; caller must be an admin).
+ * edge function (runs with the service role; caller must be a platform admin
+ * or org_admin of the target org). The approver picks the org + role.
  * Returns true if an invite was sent, false if the email already has an account.
  */
-export async function approveAndInvite(requestId: string): Promise<boolean> {
-  const data = await invokeInviteFunction(requestId, "email");
+export async function approveAndInvite(
+  requestId: string,
+  options: ApproveOptions
+): Promise<boolean> {
+  const data = await invokeInviteFunction(requestId, "email", options);
   return !data?.alreadyRegistered;
 }
 
@@ -155,8 +179,11 @@ export async function approveAndInvite(requestId: string): Promise<boolean> {
  * mail rate limits apply. The admin shares the link through their own channel.
  * For emails that already have an account, returns a one-time sign-in link.
  */
-export async function approveAndGetLink(requestId: string): Promise<InviteLink> {
-  const data = await invokeInviteFunction(requestId, "link");
+export async function approveAndGetLink(
+  requestId: string,
+  options: ApproveOptions
+): Promise<InviteLink> {
+  const data = await invokeInviteFunction(requestId, "link", options);
   if (!data?.link) {
     throw new Error("No invite link returned — try again.");
   }
@@ -182,7 +209,12 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
     lastName: u.last_name ?? "",
     displayName: u.display_name ?? "",
     phone: u.phone ?? "",
-    userType: u.user_type ?? "",
+    isPlatformAdmin: !!u.is_platform_admin,
+    memberships: (u.memberships ?? []).map((m: any) => ({
+      organizationId: m.organization_id,
+      organizationName: m.organization_name ?? "",
+      role: m.role ?? "",
+    })),
     createdAt: u.created_at ?? "",
     lastSignInAt: u.last_sign_in_at ?? null,
   }));
@@ -199,13 +231,14 @@ export async function getRoles(): Promise<Role[]> {
   }));
 }
 
-export async function updateUserRole(userId: string, userType: string): Promise<void> {
+/** Grant or revoke the platform-admin (drone company) flag. */
+export async function setPlatformAdmin(userId: string, grant: boolean): Promise<void> {
   const supabase = createClient();
-  // RPC rather than a direct profiles update: RLS only lets admins edit
-  // org-mates, while platform admins manage everyone
-  const { error } = await supabase.rpc("admin_set_user_role", {
+  // RPC rather than a direct profiles update: is_platform_admin is locked
+  // down by column grants; only the SECURITY DEFINER RPC may flip it
+  const { error } = await supabase.rpc("admin_set_platform_admin", {
     target_user: userId,
-    new_role: userType,
+    grant_admin: grant,
   });
   if (error) throw error;
 }
@@ -215,7 +248,15 @@ export type RegisterUserInput = {
   firstName: string;
   lastName: string;
   phone: string;
-  userType: string;
+  /** create a Drone Company (platform) admin — no org membership */
+  platformAdmin?: boolean;
+  /** org membership target (when not a platform admin) */
+  organizationId?: string;
+  /** org_admin | farm_manager | worker | drone_operator */
+  orgRole?: string;
+  /** farm scope, farm_manager only */
+  farmIds?: string[];
+  scopeAllFarms?: boolean;
   /** email: send invite mail · link: return invite URL · password: create ready-to-use account */
   method: "email" | "link" | "password";
   password?: string;
@@ -303,6 +344,48 @@ export async function getAdminOrganizations(): Promise<AdminOrganization[]> {
     logoUrl: o.logo_url ?? "",
     farmCount: farmCounts.get(o.id) ?? 0,
   }));
+}
+
+export type CreateOrganizationInput = {
+  name: string;
+  country?: string;
+  contactEmail?: string;
+  crops?: string[];
+  totalArea?: string;
+};
+
+/**
+ * Create a new organization. RLS only lets platform admins insert into
+ * organizations, so no edge function is needed. Returns the new org's id.
+ */
+export async function createOrganization(input: CreateOrganizationInput): Promise<string> {
+  const supabase = createClient();
+  const slug = input.name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  const { data, error } = await supabase
+    .from("organizations")
+    .insert({
+      name: input.name.trim(),
+      slug,
+      country: input.country?.trim() || "",
+      contact_email: input.contactEmail?.trim() || "",
+      crops: input.crops ?? [],
+      total_area: input.totalArea?.trim() || "",
+    })
+    .select("id")
+    .single();
+  if (error) {
+    // unique violation on slug: an org with a too-similar name exists
+    throw new Error(
+      error.code === "23505"
+        ? "An organization with a very similar name already exists."
+        : error.message
+    );
+  }
+  return data.id;
 }
 
 export async function getAdminOrganization(id: string): Promise<AdminOrganization | null> {

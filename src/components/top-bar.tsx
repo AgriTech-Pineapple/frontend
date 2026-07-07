@@ -5,8 +5,35 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Bell, AlertCircle } from "lucide-react";
+import { Search, Bell, AlertCircle, Building2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { useActiveOrg } from "@/lib/org";
+
+/** Org switcher — only rendered for users belonging to more than one org. */
+function OrgSwitcher() {
+  const { memberships, activeOrg, setActiveOrgId } = useActiveOrg();
+  if (memberships.length < 2) return null;
+  return (
+    <Select value={activeOrg?.organizationId ?? ""} onValueChange={setActiveOrgId}>
+      <SelectTrigger className="h-9 w-[190px] bg-white text-sm">
+        <span className="flex items-center gap-2 truncate">
+          <Building2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <SelectValue placeholder="Organization" />
+        </span>
+      </SelectTrigger>
+      <SelectContent>
+        {memberships.map((m) => (
+          <SelectItem key={m.organizationId} value={m.organizationId}>
+            {m.organizationName || "Unnamed org"}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
 
 type Alert = { level: "High" | "Medium" | "Low"; farm: string; title: string; ago: string };
 
@@ -36,6 +63,7 @@ export function TopBar() {
         </div>
       </div>
       <div className="flex items-center gap-2">
+        <OrgSwitcher />
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative" aria-label="Recent alerts">

@@ -31,13 +31,13 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      // admins land on the admin console, everyone else on the main dashboard
+      // platform admins land on the admin console, everyone else on the main dashboard
       const { data: profile } = await supabase
         .from("profiles")
-        .select("user_type")
+        .select("is_platform_admin")
         .eq("id", data.user.id)
         .single();
-      router.push(profile?.user_type === "admin" ? "/admin" : "/");
+      router.push(profile?.is_platform_admin ? "/admin" : "/");
       router.refresh();
     }
   }
