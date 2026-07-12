@@ -126,9 +126,10 @@ export default function LandingPage() {
     >
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
       <nav className="lp-nav fixed top-0 w-full z-50 flex justify-between items-center px-4 sm:px-6 lg:px-10 py-4 border-b border-transparent">
-        <div className="nav-logo text-2xl tracking-tighter text-primary font-extrabold">
+        <div className="nav-logo text-2xl tracking-tighter gap-10 text-primary font-extrabold flex">
           Agritech
         </div>
+        <img src="Drone Legacy Logo.svg" className="w-48"/>
         <div className="flex items-center gap-6">
           <div className="hidden lg:flex items-center gap-4">
             <span className="nav-icon material-symbols-outlined text-on-surface-variant cursor-pointer">
